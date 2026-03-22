@@ -2706,6 +2706,67 @@
       saveBracket(state.bracket);
     });
 
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Task 13: File Export and Import (.bracket) ──────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+
+    function sanitizeFilename(title) {
+      return (title || 'bracket').replace(/[^a-zA-Z0-9_\-\s]/g, '').replace(/\s+/g, '_').substring(0, 60) || 'bracket';
+    }
+
+    // ── Save Bracket (download .bracket file) ──
+    document.getElementById('btn-save').addEventListener('click', function() {
+      const bracket = state.bracket;
+      if (!bracket) return;
+      const json = JSON.stringify(bracket, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = sanitizeFilename(bracket.title) + '.bracket';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // ── Load Bracket (from .bracket file) ──
+    document.getElementById('btn-load').addEventListener('click', function() {
+      document.getElementById('load-file-input').click();
+    });
+
+    document.getElementById('load-file-input').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        try {
+          const data = JSON.parse(ev.target.result);
+          // Validate required fields
+          if (!data.id || !data.size || !data.slots || !data.cells) {
+            alert('Invalid bracket file: missing required fields.');
+            return;
+          }
+          if (!BRACKET_SIZES.includes(data.size)) {
+            alert('Invalid bracket size: ' + data.size);
+            return;
+          }
+          // Give it a new ID to avoid collisions
+          data.id = generateId();
+          data.updatedAt = new Date().toISOString();
+          state.bracket = data;
+          saveBracket(data);
+          fullRenderCurrentBracket();
+        } catch (err) {
+          alert('Failed to load bracket file: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      // Reset so the same file can be loaded again
+      this.value = '';
+    });
+
     // ── Initialize ─────────────────────────────────────────────────────────
 
     (function initApp() {
