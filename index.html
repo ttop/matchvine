@@ -138,15 +138,15 @@
     /* ── Cells ─────────────────────────────────────────────────────────────── */
     .cell {
       border-radius: 8px;
-      width: 150px;
-      height: 48px;
+      width: 200px;
+      height: 56px;
       cursor: pointer;
       position: absolute;
       transition: border-color 0.15s, box-shadow 0.15s;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
+      font-size: 20px;
       border: 1.5px solid #d1d5db;
       overflow: hidden;
       user-select: none;
@@ -193,7 +193,7 @@
     .cell-champion {
       border-color: #f59e0b;
       border-width: 2.5px;
-      width: 170px;
+      width: 220px;
     }
 
     /* ── Promote Button ────────────────────────────────────────────────────── */
@@ -242,7 +242,7 @@
     .format-icon {
       position: absolute;
       top: 4px;
-      right: 4px;
+      left: 4px;
       width: 22px;
       height: 22px;
       background: rgba(255, 255, 255, 0.85);
@@ -831,6 +831,32 @@
     </div>
   </div>
 
+  <!-- ── New Bracket Dialog ───────────────────────────────────────────────── -->
+  <div id="new-bracket-dialog" class="dialog hidden">
+    <div class="dialog-header">
+      <span class="dialog-title">Create New Bracket</span>
+      <button class="dialog-close" id="new-bracket-dialog-close" title="Close">✕</button>
+    </div>
+    <div class="dialog-body">
+      <div class="settings-section">
+        <div class="settings-section-label">Bracket Title</div>
+        <input type="text" id="new-bracket-title-input" value="New Bracket" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;" />
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-label">Bracket Size</div>
+        <div class="size-toggles" id="new-bracket-size-toggles">
+          <button class="size-toggle" data-size="4">4</button>
+          <button class="size-toggle" data-size="8">8</button>
+          <button class="size-toggle active" data-size="16">16</button>
+          <button class="size-toggle" data-size="32">32</button>
+          <button class="size-toggle" data-size="64">64</button>
+          <button class="size-toggle" data-size="128">128</button>
+        </div>
+      </div>
+      <button id="new-bracket-create-btn" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px 16px;background:#3b82f6;color:white;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:background 0.1s;">Create Bracket</button>
+    </div>
+  </div>
+
   <!-- ── Format Popover ────────────────────────────────────────────────────── -->
   <div id="format-popover" class="hidden">
     <div class="popover-section">
@@ -906,11 +932,11 @@
       'Righteous',
     ];
 
-    const CELL_WIDTH  = 150;
-    const CELL_HEIGHT = 48;
+    const CELL_WIDTH  = 200;
+    const CELL_HEIGHT = 56;
     const ROUND_GAP   = 60;
     const CELL_GAP    = 8;
-    const CHAMP_WIDTH = 170;
+    const CHAMP_WIDTH = 220;
     const TOP_PADDING = 20;
     const LABEL_MARGIN = 40;
     const LEFT_PADDING = 30; // enough room for seed numbers on the left
@@ -1487,7 +1513,7 @@
       const textEl = cellDiv.querySelector('.cell-text');
       if (!textEl) return;
 
-      const BASE_FONT = 18;
+      const BASE_FONT = 22;
       const MIN_FONT  = 9;
       const PAD       = 8; // horizontal/vertical padding allowance
 
@@ -1575,7 +1601,7 @@
       const bracket = state.bracket;
       const slot = bracket.slots[slotIndex];
 
-      // If empty slot, create a new cell first
+      // If empty slot, create a new cell first, then re-render
       if (!slot.cellId) {
         const color = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
         const newCell = createCell('', color);
@@ -1586,15 +1612,14 @@
 
       state.editingSlotIndex = slotIndex;
 
+      // After renderBracket (and its monkey-patches), find the freshly rendered cell
       const container = document.getElementById('bracket-container');
       const cellEl = container.querySelector(`.cell[data-slot-index="${slotIndex}"]`);
       if (!cellEl) return;
 
-      // Find or create the text span
+      // The monkey-patched renderBracket already wraps content in .cell-text spans
       let textEl = cellEl.querySelector('.cell-text');
       if (!textEl) {
-        // The cell content may have been set as innerHTML without a span.
-        // Wrap existing content in a .cell-text span.
         const existingHtml = cellEl.innerHTML;
         cellEl.innerHTML = '';
         textEl = document.createElement('span');
@@ -1615,15 +1640,18 @@
       cellEl.classList.add('cell-editing');
       cellEl.classList.remove('cell-empty');
       textEl.contentEditable = 'true';
-      textEl.focus();
 
-      // Place cursor at end
-      const range = document.createRange();
-      const sel   = window.getSelection();
-      range.selectNodeContents(textEl);
-      range.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(range);
+      // Use requestAnimationFrame to ensure DOM is settled before focusing
+      requestAnimationFrame(() => {
+        textEl.focus();
+        // Place cursor at end
+        const range = document.createRange();
+        const sel   = window.getSelection();
+        range.selectNodeContents(textEl);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      });
     }
 
     // ── Patch renderBracket to use .cell-text spans and call autoSizeText ─
@@ -1756,9 +1784,6 @@
           const formatIcon = document.createElement('span');
           formatIcon.className = 'format-icon';
           formatIcon.textContent = '🎨';
-          formatIcon.addEventListener('click', function(ev) {
-            ev.stopPropagation();
-          });
           cellEl.appendChild(formatIcon);
 
           // ── Promote buttons ──
@@ -2159,7 +2184,7 @@
     }
 
     function hideAllDialogs() {
-      ['settings-dialog', 'seed-dialog', 'brackets-dialog'].forEach(id => {
+      ['settings-dialog', 'seed-dialog', 'brackets-dialog', 'new-bracket-dialog'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
       });
       document.getElementById('dialog-overlay').classList.add('hidden');
@@ -2669,10 +2694,13 @@
                 remaining.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
                 switchToBracket(remaining[0].id);
               } else {
-                const newBr = createBracket(16, 'New Bracket');
-                state.bracket = newBr;
-                saveBracket(newBr);
+                // No brackets left — show creation dialog
+                const tempBr = createBracket(16, 'New Bracket');
+                state.bracket = tempBr;
                 fullRenderCurrentBracket();
+                hideDialog('brackets-dialog');
+                openNewBracketDialog();
+                return;
               }
             }
             openBracketsDialog(); // refresh list
@@ -2694,11 +2722,45 @@
     }
 
     document.getElementById('new-bracket-btn').addEventListener('click', function() {
-      const newBr = createBracket(16, 'New Bracket');
+      hideDialog('brackets-dialog');
+      openNewBracketDialog();
+    });
+
+    // ── New Bracket Dialog logic ──
+
+    let newBracketSelectedSize = 16;
+
+    function openNewBracketDialog() {
+      newBracketSelectedSize = 16;
+      document.getElementById('new-bracket-title-input').value = 'New Bracket';
+      document.querySelectorAll('#new-bracket-size-toggles .size-toggle').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.getAttribute('data-size'), 10) === 16);
+      });
+      showDialog('new-bracket-dialog');
+      document.getElementById('new-bracket-title-input').focus();
+      document.getElementById('new-bracket-title-input').select();
+    }
+
+    document.getElementById('new-bracket-dialog-close').addEventListener('click', function() {
+      hideDialog('new-bracket-dialog');
+    });
+
+    document.getElementById('new-bracket-size-toggles').addEventListener('click', function(e) {
+      const btn = e.target.closest('.size-toggle');
+      if (!btn) return;
+      newBracketSelectedSize = parseInt(btn.getAttribute('data-size'), 10);
+      this.querySelectorAll('.size-toggle').forEach(b => {
+        b.classList.toggle('active', parseInt(b.getAttribute('data-size'), 10) === newBracketSelectedSize);
+      });
+    });
+
+    document.getElementById('new-bracket-create-btn').addEventListener('click', function() {
+      const title = document.getElementById('new-bracket-title-input').value.trim() || 'New Bracket';
+      const newBr = createBracket(newBracketSelectedSize, title);
       state.bracket = newBr;
       saveBracket(newBr);
       fullRenderCurrentBracket();
-      hideDialog('brackets-dialog');
+      hideDialog('new-bracket-dialog');
     });
 
     function switchToBracket(id) {
@@ -3196,8 +3258,13 @@
       }
 
       if (!bracket) {
+        // No saved brackets — show the creation dialog instead of silently creating
+        // Create a temporary default bracket so the UI has something to render
         bracket = createBracket(16, 'New Bracket');
-        saveBracket(bracket);
+        state.bracket = bracket;
+        fullRenderCurrentBracket();
+        openNewBracketDialog();
+        return;
       }
 
       state.bracket = bracket;
