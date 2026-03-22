@@ -670,6 +670,32 @@
     .cell[draggable="true"]:active {
       cursor: grabbing;
     }
+
+    /* ── Polish Transitions ───────────────────────────────────────────────── */
+    .cell {
+      transition: border-color 0.2s, box-shadow 0.2s, opacity 0.3s, background-color 0.2s;
+    }
+
+    .promote-btn {
+      opacity: 0;
+      transition: opacity 0.2s, background 0.15s;
+    }
+
+    .cell:hover .promote-btn {
+      opacity: 1;
+    }
+
+    .cell-loser {
+      transition: opacity 0.4s;
+    }
+
+    .dialog {
+      transition: opacity 0.15s, transform 0.15s;
+    }
+
+    #dialog-overlay {
+      transition: opacity 0.15s;
+    }
   </style>
 </head>
 <body>
@@ -3300,6 +3326,19 @@
       state.bracket = bracket;
       fullRenderCurrentBracket();
     })();
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Task 16: Polish and Final Integration ───────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+
+    // Window resize handler for scaleToFit
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function() {
+        scaleToFit();
+      }, 100);
+    });
   </script>
 
 </body>
