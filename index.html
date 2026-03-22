@@ -1634,11 +1634,17 @@
         e.preventDefault();
         confirmEdit();
       } else if (e.key === 'Escape') {
-        // Revert to before-edit text
+        // Revert to before-edit text; if cell was just created from empty slot, remove it
         const bracket = state.bracket;
         const slot = bracket.slots[state.editingSlotIndex];
         if (slot && slot.cellId && bracket.cells[slot.cellId]) {
-          bracket.cells[slot.cellId].text = state.beforeEditText;
+          if (state.beforeEditText === '' || state.beforeEditText === null) {
+            // Cell was created from empty slot — remove it entirely
+            delete bracket.cells[slot.cellId];
+            slot.cellId = null;
+          } else {
+            bracket.cells[slot.cellId].text = state.beforeEditText;
+          }
         }
         exitEditMode();
         renderBracket(bracket);
