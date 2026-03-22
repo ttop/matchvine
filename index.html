@@ -2359,6 +2359,89 @@
       populateFontPicker();
     };
 
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Task 10: Seed Dialog ──────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+
+    document.getElementById('btn-seed').addEventListener('click', function() {
+      openSeedDialog();
+    });
+
+    function openSeedDialog() {
+      const textarea = document.getElementById('seed-textarea');
+      textarea.value = '';
+      updateSeedPreview();
+      showDialog('seed-dialog');
+      textarea.focus();
+    }
+
+    document.getElementById('seed-dialog-close').addEventListener('click', function() {
+      hideDialog('seed-dialog');
+    });
+
+    function getEmptyFirstRoundSlots(bracket) {
+      const empty = [];
+      for (let i = 0; i < bracket.size; i++) {
+        const slotIndex = getSlotIndex(bracket.size, 0, i);
+        const slot = bracket.slots[slotIndex];
+        if (!slot.cellId) {
+          empty.push(slotIndex);
+        }
+      }
+      return empty;
+    }
+
+    function updateSeedPreview() {
+      const textarea = document.getElementById('seed-textarea');
+      const preview = document.getElementById('seed-preview-count');
+      const text = textarea.value;
+      const names = text.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+      const emptySlots = getEmptyFirstRoundSlots(state.bracket);
+      const totalSlots = state.bracket.size;
+      const emptyCount = emptySlots.length;
+
+      if (names.length === 0) {
+        preview.textContent = '0 participants entered';
+        preview.style.color = '#6b7280';
+      } else {
+        const willFill = Math.min(names.length, emptyCount);
+        let msg = `${names.length} names → ${willFill} of ${totalSlots} slots will be filled`;
+        if (names.length > emptyCount) {
+          msg += ` (${names.length - emptyCount} will be truncated — only ${emptyCount} empty slots)`;
+          preview.style.color = '#dc2626';
+        } else {
+          preview.style.color = '#6b7280';
+        }
+        preview.textContent = msg;
+      }
+    }
+
+    document.getElementById('seed-textarea').addEventListener('input', updateSeedPreview);
+
+    document.getElementById('seed-import-btn').addEventListener('click', function() {
+      const bracket = state.bracket;
+      const textarea = document.getElementById('seed-textarea');
+      const text = textarea.value;
+      const names = text.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+
+      if (names.length === 0) return;
+
+      const emptySlots = getEmptyFirstRoundSlots(bracket);
+
+      const count = Math.min(names.length, emptySlots.length);
+      for (let i = 0; i < count; i++) {
+        const color = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+        const cell = createCell(names[i], color);
+        cell.sourceSlot = emptySlots[i];
+        bracket.cells[cell.id] = cell;
+        bracket.slots[emptySlots[i]].cellId = cell.id;
+      }
+
+      bracket.updatedAt = new Date().toISOString();
+      hideDialog('seed-dialog');
+      renderBracket(bracket);
+    });
+
     // ── Initialize ─────────────────────────────────────────────────────────
 
     state.bracket = createBracket(16, 'New Bracket');
