@@ -147,7 +147,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
+      font-size: 16px;
       border: 1.5px solid #d1d5db;
       overflow: hidden;
       user-select: none;
@@ -170,8 +170,14 @@
       color: #9ca3af;
     }
 
+    /* Make cell-text not intercept drag events when cell is draggable */
+    .cell[draggable="true"] .cell-text {
+      pointer-events: none;
+    }
+
     /* Allow text selection inside a cell that is being edited */
     .cell-text[contenteditable="true"] {
+      pointer-events: auto;
       user-select: text;
       cursor: text;
     }
@@ -582,7 +588,7 @@
 
     /* ── Format Popover ────────────────────────────────────────────────────── */
     #format-popover {
-      position: absolute;
+      position: fixed;
       background: white;
       border-radius: 12px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -908,6 +914,7 @@
     const CHAMP_WIDTH = 170;
     const TOP_PADDING = 20;
     const LABEL_MARGIN = 40;
+    const LEFT_PADDING = 20;
 
     // ── State ────────────────────────────────────────────────────────────────
 
@@ -1112,16 +1119,16 @@
       const leftCols = roundsPerHalf;
       const rightCols = roundsPerHalf;
       const CENTER_GAP = ROUND_GAP;
-      const totalWidth = leftCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + CENTER_GAP + CHAMP_WIDTH + CENTER_GAP + rightCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP;
+      const totalWidth = LEFT_PADDING + leftCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + CENTER_GAP + CHAMP_WIDTH + CENTER_GAP + rightCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + LEFT_PADDING;
 
       // Champion x position: center
-      const championX = leftCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + CENTER_GAP;
+      const championX = LEFT_PADDING + leftCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + CENTER_GAP;
 
       // --- Place round 0 cells for LEFT half (indices 0..halfSize-1) ---
       for (let i = 0; i < halfSize; i++) {
         const slotIndex = getSlotIndex(size, 0, i);
         const y = TOP_PADDING + i * (CELL_HEIGHT + CELL_GAP);
-        const x = 0;
+        const x = LEFT_PADDING;
         const pos = {
           slotIndex,
           round: 0,
@@ -1167,7 +1174,7 @@
 
           let x;
           if (leftHalf) {
-            x = round * (CELL_WIDTH + ROUND_GAP);
+            x = LEFT_PADDING + round * (CELL_WIDTH + ROUND_GAP);
           } else {
             // For right half, figure out which "column index from right" this is
             // Right half round 0 is at rightEdgeX. Round 1 is one step left, etc.
@@ -1414,7 +1421,7 @@
       for (let r = 0; r < roundsPerHalf; r++) {
         const labelEl = document.createElement('div');
         labelEl.className = 'round-label';
-        const x = r * (CELL_WIDTH + ROUND_GAP);
+        const x = LEFT_PADDING + r * (CELL_WIDTH + ROUND_GAP);
         labelEl.style.left = x + 'px';
         labelEl.style.top = labelY + 'px';
         labelEl.style.width = CELL_WIDTH + 'px';
@@ -1481,7 +1488,7 @@
       const textEl = cellDiv.querySelector('.cell-text');
       if (!textEl) return;
 
-      const BASE_FONT = 16;
+      const BASE_FONT = 18;
       const MIN_FONT  = 9;
       const PAD       = 8; // horizontal/vertical padding allowance
 
@@ -1666,6 +1673,14 @@
       }
 
       const slotIndex = parseInt(cellEl.getAttribute('data-slot-index'), 10);
+      const round = parseInt(cellEl.getAttribute('data-round'), 10);
+      const slot = state.bracket.slots[slotIndex];
+
+      // For rounds > 0, only allow editing if the slot already has a cell (promoted).
+      // Don't allow creating new cells in later rounds — those must be filled via promote.
+      if (round > 0 && (!slot || !slot.cellId)) {
+        return;
+      }
 
       if (state.editingSlotIndex !== null && state.editingSlotIndex !== slotIndex) {
         // Clicking a different cell: confirm current edit first
@@ -1852,17 +1867,16 @@
       // Auto-contrast checkbox
       autoCheck.checked = cell.textColor === getAutoTextColor(cell.bgColor);
 
-      // Position popover above the cell
+      // Position popover above the cell using fixed/screen coordinates
       const container = document.getElementById('bracket-container');
       const cellEl = container.querySelector(`.cell[data-slot-index="${slotIndex}"]`);
       if (!cellEl) return;
 
       const cellRect = cellEl.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
 
       const popoverWidth = 240;
-      let left = (cellRect.left - containerRect.left) + (cellRect.width / 2) - (popoverWidth / 2);
-      let top = (cellRect.top - containerRect.top) - 10;
+      let left = cellRect.left + (cellRect.width / 2) - (popoverWidth / 2);
+      let top = cellRect.top - 10;
 
       popover.classList.remove('hidden');
 
@@ -2004,6 +2018,16 @@
       const nextSlotIndex = getSlotIndex(bracket.size, next.round, next.index);
       const nextSlot = bracket.slots[nextSlotIndex];
       if (nextSlot.cellId) return; // already occupied
+
+      // Verify both feeders in the matchup are filled (no bye promotion)
+      const feeders = getMatchupPair(bracket.size, next.round, next.index);
+      if (feeders) {
+        const slotA = bracket.slots[feeders[0]];
+        const slotB = bracket.slots[feeders[1]];
+        const bothFilled = slotA && slotA.cellId && bracket.cells[slotA.cellId]
+                        && slotB && slotB.cellId && bracket.cells[slotB.cellId];
+        if (!bothFilled) return;
+      }
 
       nextSlot.cellId = slot.cellId;
       renderBracket(bracket);
