@@ -3031,6 +3031,255 @@
       this.value = '';
     });
 
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Task 15: Region Focus Navigation ────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+
+    function getBracketRegions(size) {
+      if (size <= 16) return null;
+      const totalSlots = 2 * size - 1;
+      const quarterSize = size / 4;
+
+      if (size === 32 || size === 64) {
+        // 4 quarter regions
+        const regions = [];
+        const regionNames = ['Top Left', 'Bottom Left', 'Top Right', 'Bottom Right'];
+        // Each quarter covers quarterSize first-round slots and their downstream
+        for (let q = 0; q < 4; q++) {
+          const slotIndices = [];
+          // First-round slots for this quarter
+          const startIdx = q < 2 ? q * quarterSize : size / 2 + (q - 2) * quarterSize;
+          for (let i = startIdx; i < startIdx + quarterSize; i++) {
+            slotIndices.push(getSlotIndex(size, 0, i));
+          }
+          // Add downstream rounds fed by these first-round slots
+          let currentIndices = [];
+          for (let i = startIdx; i < startIdx + quarterSize; i++) {
+            currentIndices.push(i);
+          }
+          let round = 1;
+          while (currentIndices.length > 1) {
+            const nextIndices = [];
+            const seen = new Set();
+            for (const idx of currentIndices) {
+              const nextIdx = Math.floor(idx / 2);
+              if (!seen.has(nextIdx)) {
+                seen.add(nextIdx);
+                nextIndices.push(nextIdx);
+                slotIndices.push(getSlotIndex(size, round, nextIdx));
+              }
+            }
+            currentIndices = nextIndices;
+            round++;
+            // Stop before we reach the semi-final/champion rounds shared between quarters
+            if (currentIndices.length <= 1) break;
+          }
+          regions.push({ name: regionNames[q], slotIndices });
+        }
+        return regions;
+      }
+
+      if (size === 128) {
+        // 8 eighth regions
+        const eighthSize = size / 8;
+        const regions = [];
+        const regionNames = ['Region 1', 'Region 2', 'Region 3', 'Region 4', 'Region 5', 'Region 6', 'Region 7', 'Region 8'];
+        for (let q = 0; q < 8; q++) {
+          const slotIndices = [];
+          const startIdx = q < 4 ? q * eighthSize : size / 2 + (q - 4) * eighthSize;
+          for (let i = startIdx; i < startIdx + eighthSize; i++) {
+            slotIndices.push(getSlotIndex(size, 0, i));
+          }
+          let currentIndices = [];
+          for (let i = startIdx; i < startIdx + eighthSize; i++) {
+            currentIndices.push(i);
+          }
+          let round = 1;
+          while (currentIndices.length > 1) {
+            const nextIndices = [];
+            const seen = new Set();
+            for (const idx of currentIndices) {
+              const nextIdx = Math.floor(idx / 2);
+              if (!seen.has(nextIdx)) {
+                seen.add(nextIdx);
+                nextIndices.push(nextIdx);
+                slotIndices.push(getSlotIndex(size, round, nextIdx));
+              }
+            }
+            currentIndices = nextIndices;
+            round++;
+            if (currentIndices.length <= 1) break;
+          }
+          regions.push({ name: regionNames[q], slotIndices });
+        }
+        return regions;
+      }
+
+      return null;
+    }
+
+    function scaleToFit() {
+      const container = document.getElementById('bracket-container');
+      const inner = container.firstElementChild;
+      if (!inner) return;
+
+      // Reset transform to measure natural size
+      container.style.transform = '';
+      container.style.transformOrigin = '';
+
+      const containerRect = container.getBoundingClientRect();
+      const contentWidth = parseInt(container.style.width) || container.scrollWidth;
+      const contentHeight = parseInt(container.style.height) || container.scrollHeight;
+
+      if (contentWidth <= 0 || contentHeight <= 0) return;
+
+      const scaleX = containerRect.width / contentWidth;
+      const scaleY = containerRect.height / contentHeight;
+      const scale = Math.min(scaleX, scaleY, 1); // don't scale up beyond 1
+
+      if (scale < 1) {
+        container.style.transformOrigin = 'top left';
+        container.style.transform = `scale(${scale})`;
+      }
+    }
+
+    // Patch renderBracket to add region overlays and scale
+    const _renderBeforeRegions = renderBracket;
+    renderBracket = function(bracket) {
+      // Check if we're in focused region mode
+      if (bracket.zoomState && bracket.zoomState.focused && bracket.zoomState.region) {
+        renderFocusedRegion(bracket, bracket.zoomState.region);
+        return;
+      }
+
+      _renderBeforeRegions(bracket);
+
+      const regions = getBracketRegions(bracket.size);
+      if (regions) {
+        addRegionOverlays(bracket, regions);
+      }
+
+      // Scale to fit after render
+      requestAnimationFrame(() => scaleToFit());
+    };
+
+    function addRegionOverlays(bracket, regions) {
+      const container = document.getElementById('bracket-container');
+      const layout = calculateLayout(bracket);
+      const { posMap } = layout;
+
+      regions.forEach(region => {
+        // Calculate bounding box of region slots
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        region.slotIndices.forEach(si => {
+          const pos = posMap[si];
+          if (!pos) return;
+          const w = pos.isChampion ? CHAMP_WIDTH : CELL_WIDTH;
+          if (pos.x < minX) minX = pos.x;
+          if (pos.y < minY) minY = pos.y;
+          if (pos.x + w > maxX) maxX = pos.x + w;
+          if (pos.y + CELL_HEIGHT > maxY) maxY = pos.y + CELL_HEIGHT;
+        });
+
+        if (minX === Infinity) return;
+
+        const pad = 10;
+        const overlay = document.createElement('div');
+        overlay.className = 'region-overlay';
+        overlay.style.position = 'absolute';
+        overlay.style.left = (minX - pad) + 'px';
+        overlay.style.top = (minY - pad) + 'px';
+        overlay.style.width = (maxX - minX + pad * 2) + 'px';
+        overlay.style.height = (maxY - minY + pad * 2) + 'px';
+        overlay.style.borderRadius = '12px';
+        overlay.style.border = '2px dashed transparent';
+        overlay.style.cursor = 'pointer';
+        overlay.style.zIndex = '5';
+        overlay.style.transition = 'background 0.2s, border-color 0.2s';
+        overlay.title = 'Click to focus: ' + region.name;
+
+        // Label
+        const label = document.createElement('div');
+        label.style.position = 'absolute';
+        label.style.top = '-18px';
+        label.style.left = '8px';
+        label.style.fontSize = '10px';
+        label.style.color = '#9ca3af';
+        label.style.fontWeight = '600';
+        label.style.opacity = '0';
+        label.style.transition = 'opacity 0.2s';
+        label.textContent = region.name;
+        overlay.appendChild(label);
+
+        overlay.addEventListener('mouseenter', function() {
+          this.style.background = 'rgba(59, 130, 246, 0.04)';
+          this.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+          label.style.opacity = '1';
+        });
+        overlay.addEventListener('mouseleave', function() {
+          this.style.background = '';
+          this.style.borderColor = 'transparent';
+          label.style.opacity = '0';
+        });
+        overlay.addEventListener('click', function(ev) {
+          if (ev.target.closest('.cell')) return; // Don't intercept cell clicks
+          bracket.zoomState = { focused: true, region: region };
+          renderBracket(bracket);
+          saveBracket(bracket);
+        });
+
+        container.appendChild(overlay);
+      });
+    }
+
+    function renderFocusedRegion(bracket, region) {
+      // Use the pre-regions render
+      _renderBeforeRegions(bracket);
+
+      const container = document.getElementById('bracket-container');
+      const layout = calculateLayout(bracket);
+      const { posMap } = layout;
+
+      // Hide slots not in the region
+      const regionSet = new Set(region.slotIndices);
+      container.querySelectorAll('.cell').forEach(cellEl => {
+        const si = parseInt(cellEl.getAttribute('data-slot-index'), 10);
+        if (!regionSet.has(si)) {
+          cellEl.style.display = 'none';
+        }
+      });
+
+      // Add a back button
+      const backBtn = document.createElement('button');
+      backBtn.className = 'toolbar-btn';
+      backBtn.style.position = 'absolute';
+      backBtn.style.top = '8px';
+      backBtn.style.left = '8px';
+      backBtn.style.zIndex = '20';
+      backBtn.innerHTML = '&larr; Back to full bracket';
+      backBtn.addEventListener('click', function() {
+        bracket.zoomState = { focused: false, region: null };
+        renderBracket(bracket);
+        saveBracket(bracket);
+      });
+      container.appendChild(backBtn);
+
+      // Region title
+      const regionTitle = document.createElement('div');
+      regionTitle.style.position = 'absolute';
+      regionTitle.style.top = '10px';
+      regionTitle.style.left = '50%';
+      regionTitle.style.transform = 'translateX(-50%)';
+      regionTitle.style.fontSize = '14px';
+      regionTitle.style.fontWeight = '600';
+      regionTitle.style.color = '#374151';
+      regionTitle.style.zIndex = '20';
+      regionTitle.textContent = region.name;
+      container.appendChild(regionTitle);
+
+      requestAnimationFrame(() => scaleToFit());
+    }
+
     // ── Initialize ─────────────────────────────────────────────────────────
 
     (function initApp() {
