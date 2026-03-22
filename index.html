@@ -16,7 +16,6 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: white;
       color: #111827;
-      overflow: hidden;
     }
 
     /* ── Utility ───────────────────────────────────────────────────────────── */
@@ -131,7 +130,7 @@
     #bracket-container {
       width: 100%;
       height: calc(100vh - 52px);
-      overflow: hidden;
+      overflow: auto;
       position: relative;
       background: white;
     }
@@ -1769,34 +1768,27 @@
               const nextSlotIndex = getSlotIndex(size, next.round, next.index);
               const nextSlot = bracket.slots[nextSlotIndex];
 
-              // Check matchup pair: both cells must be filled
-              const feeders = getMatchupPair(size, next.round, next.index);
-              if (feeders) {
-                const slotA = bracket.slots[feeders[0]];
-                const slotB = bracket.slots[feeders[1]];
-                const bothFilled = slotA && slotA.cellId && bracket.cells[slotA.cellId]
-                                && slotB && slotB.cellId && bracket.cells[slotB.cellId];
+              // Show promote button if THIS cell is filled and next-round slot is empty
+              // (works for normal matchups AND byes where opponent is empty)
+              if (!nextSlot || !nextSlot.cellId) {
+                const promoteBtn = document.createElement('div');
+                promoteBtn.className = 'promote-btn';
+                promoteBtn.setAttribute('data-action', 'promote');
+                promoteBtn.setAttribute('data-slot-index', slotIndex);
 
-                if (bothFilled && (!nextSlot || !nextSlot.cellId)) {
-                  const promoteBtn = document.createElement('div');
-                  promoteBtn.className = 'promote-btn';
-                  promoteBtn.setAttribute('data-action', 'promote');
-                  promoteBtn.setAttribute('data-slot-index', slotIndex);
-
-                  const leftHalf = isLeftHalf(size, round, indexInRound);
-                  if (leftHalf) {
-                    promoteBtn.textContent = '›';
-                    promoteBtn.style.right = '-13px';
-                    promoteBtn.style.top = (CELL_HEIGHT / 2 - 13) + 'px';
-                  } else {
-                    promoteBtn.textContent = '‹';
-                    promoteBtn.style.left = '-13px';
-                    promoteBtn.style.top = (CELL_HEIGHT / 2 - 13) + 'px';
-                  }
-
-                  cellEl.style.overflow = 'visible';
-                  cellEl.appendChild(promoteBtn);
+                const leftHalf = isLeftHalf(size, round, indexInRound);
+                if (leftHalf) {
+                  promoteBtn.textContent = '›';
+                  promoteBtn.style.right = '-13px';
+                  promoteBtn.style.top = (CELL_HEIGHT / 2 - 13) + 'px';
+                } else {
+                  promoteBtn.textContent = '‹';
+                  promoteBtn.style.left = '-13px';
+                  promoteBtn.style.top = (CELL_HEIGHT / 2 - 13) + 'px';
                 }
+
+                cellEl.style.overflow = 'visible';
+                cellEl.appendChild(promoteBtn);
               }
             }
           }
@@ -2019,15 +2011,7 @@
       const nextSlot = bracket.slots[nextSlotIndex];
       if (nextSlot.cellId) return; // already occupied
 
-      // Verify both feeders in the matchup are filled (no bye promotion)
-      const feeders = getMatchupPair(bracket.size, next.round, next.index);
-      if (feeders) {
-        const slotA = bracket.slots[feeders[0]];
-        const slotB = bracket.slots[feeders[1]];
-        const bothFilled = slotA && slotA.cellId && bracket.cells[slotA.cellId]
-                        && slotB && slotB.cellId && bracket.cells[slotB.cellId];
-        if (!bothFilled) return;
-      }
+      // Allow bye promotion — no requirement that both feeders are filled
 
       nextSlot.cellId = slot.cellId;
       renderBracket(bracket);
@@ -3197,142 +3181,7 @@
       inner.style.transform = `scale(${scale})`;
     }
 
-    // Patch renderBracket to add region overlays and scale
-    const _renderBeforeRegions = renderBracket;
-    renderBracket = function(bracket) {
-      // Check if we're in focused region mode
-      if (bracket.zoomState && bracket.zoomState.focused && bracket.zoomState.region) {
-        renderFocusedRegion(bracket, bracket.zoomState.region);
-        return;
-      }
-
-      _renderBeforeRegions(bracket);
-
-      const regions = getBracketRegions(bracket.size);
-      if (regions) {
-        addRegionOverlays(bracket, regions);
-      }
-
-      // Scale to fit after render
-      requestAnimationFrame(() => scaleToFit());
-    };
-
-    function addRegionOverlays(bracket, regions) {
-      const container = document.getElementById('bracket-container');
-      const layout = calculateLayout(bracket);
-      const { posMap } = layout;
-
-      regions.forEach(region => {
-        // Calculate bounding box of region slots
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        region.slotIndices.forEach(si => {
-          const pos = posMap[si];
-          if (!pos) return;
-          const w = pos.isChampion ? CHAMP_WIDTH : CELL_WIDTH;
-          if (pos.x < minX) minX = pos.x;
-          if (pos.y < minY) minY = pos.y;
-          if (pos.x + w > maxX) maxX = pos.x + w;
-          if (pos.y + CELL_HEIGHT > maxY) maxY = pos.y + CELL_HEIGHT;
-        });
-
-        if (minX === Infinity) return;
-
-        const pad = 10;
-        const overlay = document.createElement('div');
-        overlay.className = 'region-overlay';
-        overlay.style.position = 'absolute';
-        overlay.style.left = (minX - pad) + 'px';
-        overlay.style.top = (minY - pad) + 'px';
-        overlay.style.width = (maxX - minX + pad * 2) + 'px';
-        overlay.style.height = (maxY - minY + pad * 2) + 'px';
-        overlay.style.borderRadius = '12px';
-        overlay.style.border = '2px dashed transparent';
-        overlay.style.cursor = 'pointer';
-        overlay.style.zIndex = '5';
-        overlay.style.transition = 'background 0.2s, border-color 0.2s';
-        overlay.title = 'Click to focus: ' + region.name;
-
-        // Label
-        const label = document.createElement('div');
-        label.style.position = 'absolute';
-        label.style.top = '-18px';
-        label.style.left = '8px';
-        label.style.fontSize = '10px';
-        label.style.color = '#9ca3af';
-        label.style.fontWeight = '600';
-        label.style.opacity = '0';
-        label.style.transition = 'opacity 0.2s';
-        label.textContent = region.name;
-        overlay.appendChild(label);
-
-        overlay.addEventListener('mouseenter', function() {
-          this.style.background = 'rgba(59, 130, 246, 0.04)';
-          this.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-          label.style.opacity = '1';
-        });
-        overlay.addEventListener('mouseleave', function() {
-          this.style.background = '';
-          this.style.borderColor = 'transparent';
-          label.style.opacity = '0';
-        });
-        overlay.addEventListener('click', function(ev) {
-          if (ev.target.closest('.cell')) return; // Don't intercept cell clicks
-          bracket.zoomState = { focused: true, region: region };
-          renderBracket(bracket);
-          saveBracket(bracket);
-        });
-
-        container.appendChild(overlay);
-      });
-    }
-
-    function renderFocusedRegion(bracket, region) {
-      // Use the pre-regions render
-      _renderBeforeRegions(bracket);
-
-      const container = document.getElementById('bracket-container');
-      const layout = calculateLayout(bracket);
-      const { posMap } = layout;
-
-      // Hide slots not in the region
-      const regionSet = new Set(region.slotIndices);
-      container.querySelectorAll('.cell').forEach(cellEl => {
-        const si = parseInt(cellEl.getAttribute('data-slot-index'), 10);
-        if (!regionSet.has(si)) {
-          cellEl.style.display = 'none';
-        }
-      });
-
-      // Add a back button
-      const backBtn = document.createElement('button');
-      backBtn.className = 'toolbar-btn';
-      backBtn.style.position = 'absolute';
-      backBtn.style.top = '8px';
-      backBtn.style.left = '8px';
-      backBtn.style.zIndex = '20';
-      backBtn.innerHTML = '&larr; Back to full bracket';
-      backBtn.addEventListener('click', function() {
-        bracket.zoomState = { focused: false, region: null };
-        renderBracket(bracket);
-        saveBracket(bracket);
-      });
-      container.appendChild(backBtn);
-
-      // Region title
-      const regionTitle = document.createElement('div');
-      regionTitle.style.position = 'absolute';
-      regionTitle.style.top = '10px';
-      regionTitle.style.left = '50%';
-      regionTitle.style.transform = 'translateX(-50%)';
-      regionTitle.style.fontSize = '14px';
-      regionTitle.style.fontWeight = '600';
-      regionTitle.style.color = '#374151';
-      regionTitle.style.zIndex = '20';
-      regionTitle.textContent = region.name;
-      container.appendChild(regionTitle);
-
-      requestAnimationFrame(() => scaleToFit());
-    }
+    // Region focus feature removed — use scrollbars for navigation instead.
 
     // ── Initialize ─────────────────────────────────────────────────────────
 
@@ -3359,14 +3208,8 @@
     // ── Task 16: Polish and Final Integration ───────────────────────────
     // ══════════════════════════════════════════════════════════════════════
 
-    // Window resize handler for scaleToFit
-    let resizeTimer;
-    window.addEventListener('resize', function() {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(function() {
-        scaleToFit();
-      }, 100);
-    });
+    // scaleToFit() is available as a utility but not called automatically.
+    // The bracket uses scrollbars for navigation instead of scaling.
   </script>
 
 </body>
