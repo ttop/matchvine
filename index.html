@@ -2241,12 +2241,146 @@
       container.style.backgroundColor = bracket.backgroundColor || '#ffffff';
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Task 9: Google Fonts Integration ──────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+
+    const loadedGoogleFonts = new Set();
+
+    function loadGoogleFont(fontName) {
+      if (loadedGoogleFonts.has(fontName)) return Promise.resolve();
+
+      const encoded = fontName.replace(/\s+/g, '+');
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = `https://fonts.googleapis.com/css2?family=${encoded}:wght@400;500;600;700&display=swap`;
+      document.head.appendChild(link);
+      loadedGoogleFonts.add(fontName);
+
+      return document.fonts.ready;
+    }
+
+    function isGoogleFont(fontFamily) {
+      return GOOGLE_FONTS.includes(fontFamily);
+    }
+
+    function applyFont(bracket) {
+      const font = bracket.titleFont || 'sans-serif';
+      const container = document.getElementById('bracket-container');
+      container.style.fontFamily = `"${font}", sans-serif`;
+
+      const titleEl = document.getElementById('bracket-title');
+      titleEl.style.fontFamily = `"${font}", sans-serif`;
+    }
+
+    function populateFontPicker() {
+      const grid = document.getElementById('font-picker-grid');
+      grid.innerHTML = '';
+
+      const currentFont = state.bracket.titleFont || 'sans-serif';
+
+      // System fonts
+      DEFAULT_FONTS.forEach(font => {
+        const card = document.createElement('div');
+        card.className = 'font-option';
+        card.setAttribute('data-font-family', font.family);
+        card.setAttribute('data-font-type', 'system');
+        card.style.fontFamily = font.family;
+        if (currentFont === font.family) card.classList.add('selected');
+
+        card.innerHTML = `<div style="font-size:12px;font-weight:600;margin-bottom:2px">${escapeHtml(font.name)}</div><div style="font-size:10px;opacity:0.7">The quick brown fox</div>`;
+        grid.appendChild(card);
+      });
+
+      // Google fonts
+      GOOGLE_FONTS.forEach(fontName => {
+        const card = document.createElement('div');
+        card.className = 'font-option';
+        card.setAttribute('data-font-family', fontName);
+        card.setAttribute('data-font-type', 'google');
+        if (currentFont === fontName) card.classList.add('selected');
+
+        card.innerHTML = `<div style="font-size:12px;font-weight:600;margin-bottom:2px">${escapeHtml(fontName)}</div><div class="font-preview" style="font-size:10px;opacity:0.7">The quick brown fox</div>`;
+        grid.appendChild(card);
+      });
+
+      // Lazy-load Google Font previews with IntersectionObserver
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const card = entry.target;
+            const fontName = card.getAttribute('data-font-family');
+            const fontType = card.getAttribute('data-font-type');
+            if (fontType === 'google') {
+              loadGoogleFont(fontName).then(() => {
+                card.style.fontFamily = `"${fontName}", sans-serif`;
+              });
+            }
+            observer.unobserve(card);
+          }
+        });
+      }, { root: grid.closest('.dialog-body'), threshold: 0.1 });
+
+      grid.querySelectorAll('.font-option[data-font-type="google"]').forEach(card => {
+        observer.observe(card);
+      });
+    }
+
+    // Font click handler
+    document.getElementById('font-picker-grid').addEventListener('click', function(e) {
+      const card = e.target.closest('.font-option');
+      if (!card) return;
+
+      const fontFamily = card.getAttribute('data-font-family');
+      const fontType = card.getAttribute('data-font-type');
+
+      const apply = () => {
+        state.bracket.titleFont = fontFamily;
+        state.bracket.updatedAt = new Date().toISOString();
+
+        this.querySelectorAll('.font-option').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+
+        applyFont(state.bracket);
+        renderBracket(state.bracket);
+      };
+
+      if (fontType === 'google') {
+        loadGoogleFont(fontFamily).then(apply);
+      } else {
+        apply();
+      }
+    });
+
+    // Patch openSettingsDialog to populate font picker
+    const _origOpenSettings = openSettingsDialog;
+    openSettingsDialog = function() {
+      _origOpenSettings();
+      populateFontPicker();
+    };
+
     // ── Initialize ─────────────────────────────────────────────────────────
 
     state.bracket = createBracket(16, 'New Bracket');
-    applyBracketStyles(state.bracket);
-    renderBracket(state.bracket);
-    document.getElementById('bracket-title').textContent = state.bracket.title;
+
+    // Load Google Font if needed on startup
+    (function initApp() {
+      const bracket = state.bracket;
+      const font = bracket.titleFont;
+
+      function doRender() {
+        applyBracketStyles(bracket);
+        applyFont(bracket);
+        renderBracket(bracket);
+        document.getElementById('bracket-title').textContent = bracket.title;
+      }
+
+      if (isGoogleFont(font)) {
+        loadGoogleFont(font).then(doRender);
+      } else {
+        doRender();
+      }
+    })();
   </script>
 
 </body>
