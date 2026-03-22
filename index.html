@@ -108,6 +108,16 @@
       background: #f3f4f6;
     }
 
+    .toolbar-btn:focus-visible,
+    .size-toggle:focus-visible,
+    .font-option:focus-visible,
+    .dialog-close:focus-visible,
+    .color-swatch:focus-visible,
+    .bracket-entry:focus-visible {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+    }
+
     .toolbar-btn.disabled {
       opacity: 0.4;
       pointer-events: none;
@@ -678,7 +688,7 @@
     </button>
 
     <!-- Hidden file input for load -->
-    <input type="file" id="load-file-input" accept=".json" class="hidden">
+    <input type="file" id="load-file-input" accept=".bracket" class="hidden">
   </div>
 
   <!-- ── Bracket Container ─────────────────────────────────────────────────── -->
@@ -741,7 +751,7 @@
       <div class="settings-section">
         <div class="settings-section-label">Options</div>
         <div class="settings-toggle-row">
-          <span class="toggle-label">Show seed numbers</span>
+          <label class="toggle-label" for="toggle-seed-numbers">Show seed numbers</label>
           <label class="toggle-switch">
             <input type="checkbox" id="toggle-seed-numbers">
             <span class="toggle-slider"></span>
