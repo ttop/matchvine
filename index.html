@@ -1664,6 +1664,198 @@
       }
     });
 
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Task 5: Color Formatting Popover ─────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+
+    state.formattingSlotIndex = null;
+
+    // Patch renderBracket to add format icons to filled cells
+    const _renderWithText = renderBracket;
+    renderBracket = function(bracket) {
+      _renderWithText(bracket);
+
+      const container = document.getElementById('bracket-container');
+
+      container.querySelectorAll('.cell').forEach(cellEl => {
+        const slotIndex = parseInt(cellEl.getAttribute('data-slot-index'), 10);
+        const slot = bracket.slots[slotIndex];
+
+        // Add format icon for filled cells
+        if (slot && slot.cellId && bracket.cells[slot.cellId]) {
+          const formatIcon = document.createElement('span');
+          formatIcon.className = 'format-icon';
+          formatIcon.textContent = '🎨';
+          formatIcon.addEventListener('click', function(ev) {
+            ev.stopPropagation();
+          });
+          cellEl.appendChild(formatIcon);
+        }
+      });
+    };
+
+    // ── Populate and show format popover ──
+
+    function showFormatPopover(slotIndex) {
+      const bracket = state.bracket;
+      const slot = bracket.slots[slotIndex];
+      if (!slot || !slot.cellId) return;
+      const cell = bracket.cells[slot.cellId];
+      if (!cell) return;
+
+      state.formattingSlotIndex = slotIndex;
+
+      const popover = document.getElementById('format-popover');
+      const bgGrid = document.getElementById('bg-color-grid');
+      const textRow = document.getElementById('text-color-row');
+      const autoCheck = document.getElementById('auto-contrast');
+
+      // Populate background color grid
+      bgGrid.innerHTML = '';
+      COLOR_PALETTE.forEach(color => {
+        const swatch = document.createElement('div');
+        swatch.className = 'color-swatch';
+        swatch.style.backgroundColor = color;
+        swatch.setAttribute('data-color', color);
+        swatch.setAttribute('data-type', 'bg');
+        if (cell.bgColor === color) swatch.classList.add('selected');
+        bgGrid.appendChild(swatch);
+      });
+
+      // Populate text color row
+      textRow.innerHTML = '';
+      TEXT_COLORS.forEach(color => {
+        const swatch = document.createElement('div');
+        swatch.className = 'color-swatch';
+        swatch.style.backgroundColor = color;
+        swatch.style.width = '24px';
+        swatch.style.height = '24px';
+        swatch.style.borderRadius = '5px';
+        swatch.style.flexShrink = '0';
+        swatch.setAttribute('data-color', color);
+        swatch.setAttribute('data-type', 'text');
+        if (cell.textColor === color) swatch.classList.add('selected');
+        textRow.appendChild(swatch);
+      });
+
+      // Auto-contrast checkbox
+      autoCheck.checked = cell.textColor === getAutoTextColor(cell.bgColor);
+
+      // Position popover above the cell
+      const container = document.getElementById('bracket-container');
+      const cellEl = container.querySelector(`.cell[data-slot-index="${slotIndex}"]`);
+      if (!cellEl) return;
+
+      const cellRect = cellEl.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+
+      const popoverWidth = 240;
+      let left = (cellRect.left - containerRect.left) + (cellRect.width / 2) - (popoverWidth / 2);
+      let top = (cellRect.top - containerRect.top) - 10;
+
+      popover.classList.remove('hidden');
+
+      const popoverHeight = popover.offsetHeight;
+      top -= popoverHeight;
+
+      if (left < 4) left = 4;
+      if (top < 4) top = 4;
+
+      popover.style.left = left + 'px';
+      popover.style.top = top + 'px';
+    }
+
+    function hideFormatPopover() {
+      state.formattingSlotIndex = null;
+      document.getElementById('format-popover').classList.add('hidden');
+    }
+
+    // ── Format popover event handlers ──
+
+    document.getElementById('bracket-container').addEventListener('click', function(e) {
+      const formatIcon = e.target.closest('.format-icon');
+      if (formatIcon) {
+        e.stopPropagation();
+        const cellEl = formatIcon.closest('.cell');
+        if (!cellEl) return;
+        const slotIndex = parseInt(cellEl.getAttribute('data-slot-index'), 10);
+
+        if (state.formattingSlotIndex === slotIndex) {
+          hideFormatPopover();
+        } else {
+          if (state.editingSlotIndex !== null) confirmEdit();
+          showFormatPopover(slotIndex);
+        }
+        return;
+      }
+    });
+
+    // Click on bg/text swatch in popover
+    document.getElementById('format-popover').addEventListener('click', function(e) {
+      e.stopPropagation();
+      const swatch = e.target.closest('.color-swatch');
+      if (!swatch) return;
+
+      const bracket = state.bracket;
+      if (state.formattingSlotIndex === null) return;
+      const slot = bracket.slots[state.formattingSlotIndex];
+      if (!slot || !slot.cellId) return;
+      const cell = bracket.cells[slot.cellId];
+      if (!cell) return;
+
+      const color = swatch.getAttribute('data-color');
+      const type = swatch.getAttribute('data-type');
+      const autoCheck = document.getElementById('auto-contrast');
+
+      if (type === 'bg') {
+        cell.bgColor = color;
+        if (autoCheck.checked) {
+          cell.textColor = getAutoTextColor(color);
+        }
+      } else if (type === 'text') {
+        cell.textColor = color;
+        autoCheck.checked = false;
+      }
+
+      const savedSlot = state.formattingSlotIndex;
+      renderBracket(bracket);
+      showFormatPopover(savedSlot);
+    });
+
+    // Auto-contrast checkbox
+    document.getElementById('auto-contrast').addEventListener('change', function(e) {
+      e.stopPropagation();
+      if (!this.checked) return;
+      if (state.formattingSlotIndex === null) return;
+
+      const bracket = state.bracket;
+      const slot = bracket.slots[state.formattingSlotIndex];
+      if (!slot || !slot.cellId) return;
+      const cell = bracket.cells[slot.cellId];
+      if (!cell) return;
+
+      cell.textColor = getAutoTextColor(cell.bgColor);
+      const savedSlot = state.formattingSlotIndex;
+      renderBracket(bracket);
+      showFormatPopover(savedSlot);
+    });
+
+    // Dismiss popover on click outside
+    document.addEventListener('click', function(e) {
+      if (state.formattingSlotIndex === null) return;
+      const popover = document.getElementById('format-popover');
+      if (popover.contains(e.target)) return;
+      if (e.target.closest('.format-icon')) return;
+      hideFormatPopover();
+    });
+
+    // Dismiss popover on Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && state.formattingSlotIndex !== null) {
+        hideFormatPopover();
+      }
+    });
+
     // ── Initialize ─────────────────────────────────────────────────────────
 
     state.bracket = createBracket(16, 'New Bracket');
