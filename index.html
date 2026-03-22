@@ -170,6 +170,12 @@
       color: #9ca3af;
     }
 
+    /* Allow text selection inside a cell that is being edited */
+    .cell-text[contenteditable="true"] {
+      user-select: text;
+      cursor: text;
+    }
+
     .cell-winner {
       border-color: #22c55e;
       border-width: 2px;
@@ -1414,6 +1420,246 @@
         }
       }
     }
+
+    // ── Cell Editing State ────────────────────────────────────────────────
+
+    state.editingSlotIndex = null;
+    state.beforeEditText   = null;
+
+    // ── autoSizeText ──────────────────────────────────────────────────────
+
+    function autoSizeText(cellDiv) {
+      const textEl = cellDiv.querySelector('.cell-text');
+      if (!textEl) return;
+
+      const BASE_FONT = 16;
+      const MIN_FONT  = 9;
+      const PAD       = 8; // horizontal/vertical padding allowance
+
+      let fontSize = BASE_FONT;
+      textEl.style.fontSize = fontSize + 'px';
+
+      while (fontSize > MIN_FONT) {
+        if (
+          textEl.scrollHeight <= cellDiv.clientHeight - PAD &&
+          textEl.scrollWidth  <= cellDiv.clientWidth  - PAD
+        ) {
+          break;
+        }
+        fontSize--;
+        textEl.style.fontSize = fontSize + 'px';
+      }
+    }
+
+    // ── exitEditMode ──────────────────────────────────────────────────────
+
+    function exitEditMode() {
+      if (state.editingSlotIndex === null) return;
+
+      const container = document.getElementById('bracket-container');
+      const cellEl = container.querySelector(
+        `.cell[data-slot-index="${state.editingSlotIndex}"]`
+      );
+      if (cellEl) {
+        cellEl.classList.remove('cell-editing');
+        const textEl = cellEl.querySelector('.cell-text');
+        if (textEl) {
+          textEl.contentEditable = 'false';
+        }
+      }
+
+      state.editingSlotIndex = null;
+      state.beforeEditText   = null;
+    }
+
+    // ── confirmEdit ───────────────────────────────────────────────────────
+
+    function confirmEdit() {
+      if (state.editingSlotIndex === null) return;
+
+      const container = document.getElementById('bracket-container');
+      const cellEl = container.querySelector(
+        `.cell[data-slot-index="${state.editingSlotIndex}"]`
+      );
+
+      if (cellEl) {
+        const textEl = cellEl.querySelector('.cell-text');
+        if (textEl) {
+          // Extract text, converting <br> back to \n
+          let rawHtml = textEl.innerHTML;
+          rawHtml = rawHtml.replace(/<br\s*\/?>/gi, '\n');
+          // Strip any other HTML tags
+          const tmp = document.createElement('div');
+          tmp.innerHTML = rawHtml;
+          const newText = tmp.textContent;
+
+          const bracket = state.bracket;
+          const slot = bracket.slots[state.editingSlotIndex];
+          if (slot && slot.cellId && bracket.cells[slot.cellId]) {
+            bracket.cells[slot.cellId].text = newText;
+          }
+        }
+      }
+
+      const slotIdx = state.editingSlotIndex;
+      exitEditMode();
+      renderBracket(state.bracket);
+
+      // Re-apply auto-sizing to the confirmed cell
+      const updatedCellEl = document.getElementById('bracket-container').querySelector(
+        `.cell[data-slot-index="${slotIdx}"]`
+      );
+      if (updatedCellEl) {
+        autoSizeText(updatedCellEl);
+      }
+    }
+
+    // ── enterEditMode ─────────────────────────────────────────────────────
+
+    function enterEditMode(slotIndex) {
+      const bracket = state.bracket;
+      const slot = bracket.slots[slotIndex];
+
+      // If empty slot, create a new cell first
+      if (!slot.cellId) {
+        const color = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+        const newCell = createCell('', color);
+        bracket.cells[newCell.id] = newCell;
+        slot.cellId = newCell.id;
+        renderBracket(bracket);
+      }
+
+      state.editingSlotIndex = slotIndex;
+
+      const container = document.getElementById('bracket-container');
+      const cellEl = container.querySelector(`.cell[data-slot-index="${slotIndex}"]`);
+      if (!cellEl) return;
+
+      // Find or create the text span
+      let textEl = cellEl.querySelector('.cell-text');
+      if (!textEl) {
+        // The cell content may have been set as innerHTML without a span.
+        // Wrap existing content in a .cell-text span.
+        const existingHtml = cellEl.innerHTML;
+        cellEl.innerHTML = '';
+        textEl = document.createElement('span');
+        textEl.className = 'cell-text';
+        textEl.style.display = 'block';
+        textEl.style.width = '100%';
+        textEl.style.textAlign = 'center';
+        textEl.style.outline = 'none';
+        textEl.style.wordBreak = 'break-word';
+        textEl.innerHTML = existingHtml;
+        cellEl.appendChild(textEl);
+      }
+
+      // Save text before edit
+      const cell = bracket.cells[slot.cellId];
+      state.beforeEditText = cell ? cell.text : '';
+
+      cellEl.classList.add('cell-editing');
+      cellEl.classList.remove('cell-empty');
+      textEl.contentEditable = 'true';
+      textEl.focus();
+
+      // Place cursor at end
+      const range = document.createRange();
+      const sel   = window.getSelection();
+      range.selectNodeContents(textEl);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    // ── Patch renderBracket to use .cell-text spans and call autoSizeText ─
+
+    const _origRenderBracket = renderBracket;
+    renderBracket = function(bracket) {
+      _origRenderBracket(bracket);
+
+      // Wrap all cell text in .cell-text spans and apply auto-sizing
+      const container = document.getElementById('bracket-container');
+      container.querySelectorAll('.cell').forEach(cellEl => {
+        // If no .cell-text span yet, wrap existing innerHTML
+        if (!cellEl.querySelector('.cell-text')) {
+          const existingHtml = cellEl.innerHTML;
+          cellEl.innerHTML = '';
+          const textEl = document.createElement('span');
+          textEl.className = 'cell-text';
+          textEl.style.display = 'block';
+          textEl.style.width = '100%';
+          textEl.style.textAlign = 'center';
+          textEl.style.outline = 'none';
+          textEl.style.wordBreak = 'break-word';
+          textEl.innerHTML = existingHtml;
+          cellEl.appendChild(textEl);
+        }
+        autoSizeText(cellEl);
+      });
+    };
+
+    // ── Event: click on bracket container (edit delegation) ───────────────
+
+    document.getElementById('bracket-container').addEventListener('click', function(e) {
+      const cellEl = e.target.closest('.cell');
+
+      if (!cellEl) {
+        // Clicked on empty space — confirm any active edit
+        if (state.editingSlotIndex !== null) {
+          confirmEdit();
+        }
+        return;
+      }
+
+      // Ignore clicks on format icon or promote button
+      if (e.target.closest('.format-icon') || e.target.closest('.promote-btn')) {
+        return;
+      }
+
+      const slotIndex = parseInt(cellEl.getAttribute('data-slot-index'), 10);
+
+      if (state.editingSlotIndex !== null && state.editingSlotIndex !== slotIndex) {
+        // Clicking a different cell: confirm current edit first
+        confirmEdit();
+      }
+
+      if (state.editingSlotIndex !== slotIndex) {
+        enterEditMode(slotIndex);
+      }
+    });
+
+    // ── Event: keydown for editing ────────────────────────────────────────
+
+    document.addEventListener('keydown', function(e) {
+      if (state.editingSlotIndex === null) return;
+
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        confirmEdit();
+      } else if (e.key === 'Escape') {
+        // Revert to before-edit text
+        const bracket = state.bracket;
+        const slot = bracket.slots[state.editingSlotIndex];
+        if (slot && slot.cellId && bracket.cells[slot.cellId]) {
+          bracket.cells[slot.cellId].text = state.beforeEditText;
+        }
+        exitEditMode();
+        renderBracket(bracket);
+      }
+      // Shift+Enter: allow default (inserts <br> in contenteditable)
+    });
+
+    // ── Event: click outside to confirm ──────────────────────────────────
+
+    document.addEventListener('click', function(e) {
+      if (state.editingSlotIndex === null) return;
+
+      const container = document.getElementById('bracket-container');
+      // If click is outside the bracket container entirely, confirm
+      if (!container.contains(e.target)) {
+        confirmEdit();
+      }
+    });
 
     // ── Initialize ─────────────────────────────────────────────────────────
 
