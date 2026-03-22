@@ -2497,27 +2497,234 @@
       }
     };
 
-    // ── Initialize ─────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Task 12: localStorage Persistence + Brackets List ───────────────
+    // ══════════════════════════════════════════════════════════════════════
 
-    state.bracket = createBracket(16, 'New Bracket');
+    const STORAGE_INDEX_KEY = 'matchvine_index';
+    const STORAGE_BRACKET_PREFIX = 'matchvine_bracket_';
 
-    // Load Google Font if needed on startup
-    (function initApp() {
+    function saveBracket(bracket) {
+      if (!bracket) return;
+      bracket.updatedAt = new Date().toISOString();
+      const key = STORAGE_BRACKET_PREFIX + bracket.id;
+      try {
+        localStorage.setItem(key, JSON.stringify(bracket));
+      } catch (e) {
+        console.warn('Failed to save bracket to localStorage', e);
+      }
+      // Update index
+      let index = loadBracketIndex();
+      const existing = index.findIndex(entry => entry.id === bracket.id);
+      const meta = { id: bracket.id, title: bracket.title, size: bracket.size, updatedAt: bracket.updatedAt };
+      if (existing >= 0) {
+        index[existing] = meta;
+      } else {
+        index.push(meta);
+      }
+      try {
+        localStorage.setItem(STORAGE_INDEX_KEY, JSON.stringify(index));
+      } catch (e) {
+        console.warn('Failed to save bracket index', e);
+      }
+    }
+
+    function loadBracketIndex() {
+      try {
+        const raw = localStorage.getItem(STORAGE_INDEX_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return [];
+    }
+
+    function loadBracket(id) {
+      try {
+        const raw = localStorage.getItem(STORAGE_BRACKET_PREFIX + id);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return null;
+    }
+
+    function deleteBracketFromStorage(id) {
+      try {
+        localStorage.removeItem(STORAGE_BRACKET_PREFIX + id);
+      } catch (e) {}
+      let index = loadBracketIndex();
+      index = index.filter(entry => entry.id !== id);
+      try {
+        localStorage.setItem(STORAGE_INDEX_KEY, JSON.stringify(index));
+      } catch (e) {}
+    }
+
+    function formatRelativeTime(isoString) {
+      if (!isoString) return '';
+      const now = Date.now();
+      const then = new Date(isoString).getTime();
+      const diffMs = now - then;
+      const diffSec = Math.floor(diffMs / 1000);
+      const diffMin = Math.floor(diffSec / 60);
+      const diffHr = Math.floor(diffMin / 60);
+      const diffDay = Math.floor(diffHr / 24);
+
+      if (diffSec < 10) return 'just now';
+      if (diffSec < 60) return diffSec + ' sec ago';
+      if (diffMin < 60) return diffMin + ' min ago';
+      if (diffHr < 24) return diffHr + ' hr ago';
+      if (diffDay === 1) return 'yesterday';
+      if (diffDay < 7) return diffDay + ' days ago';
+
+      const d = new Date(isoString);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return months[d.getMonth()] + ' ' + d.getDate();
+    }
+
+    // ── Brackets dialog ──
+
+    document.getElementById('btn-brackets').addEventListener('click', function() {
+      openBracketsDialog();
+    });
+
+    document.getElementById('brackets-dialog-close').addEventListener('click', function() {
+      hideDialog('brackets-dialog');
+    });
+
+    function openBracketsDialog() {
+      const entries = document.getElementById('bracket-entries');
+      entries.innerHTML = '';
+
+      const index = loadBracketIndex();
+      // Sort by most recently updated
+      index.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+      if (index.length === 0) {
+        entries.innerHTML = '<p style="font-size:13px;color:#9ca3af;text-align:center;padding:16px 0">No saved brackets yet.</p>';
+      } else {
+        index.forEach(meta => {
+          const entry = document.createElement('div');
+          entry.className = 'bracket-entry';
+          if (state.bracket && meta.id === state.bracket.id) {
+            entry.style.borderColor = '#3b82f6';
+            entry.style.background = '#eff6ff';
+          }
+          entry.setAttribute('tabindex', '0');
+
+          const left = document.createElement('div');
+          left.innerHTML = `<div class="bracket-entry-name">${escapeHtml(meta.title)}</div><div class="bracket-entry-meta">${meta.size} players · ${formatRelativeTime(meta.updatedAt)}</div>`;
+
+          const delBtn = document.createElement('button');
+          delBtn.className = 'toolbar-btn';
+          delBtn.style.fontSize = '11px';
+          delBtn.style.padding = '4px 8px';
+          delBtn.textContent = 'Delete';
+          delBtn.addEventListener('click', function(ev) {
+            ev.stopPropagation();
+            if (!confirm('Delete "' + meta.title + '"? This cannot be undone.')) return;
+            deleteBracketFromStorage(meta.id);
+            if (state.bracket && state.bracket.id === meta.id) {
+              // Deleted current bracket — load another or create new
+              const remaining = loadBracketIndex();
+              if (remaining.length > 0) {
+                remaining.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+                switchToBracket(remaining[0].id);
+              } else {
+                const newBr = createBracket(16, 'New Bracket');
+                state.bracket = newBr;
+                saveBracket(newBr);
+                fullRenderCurrentBracket();
+              }
+            }
+            openBracketsDialog(); // refresh list
+          });
+
+          entry.appendChild(left);
+          entry.appendChild(delBtn);
+
+          entry.addEventListener('click', function() {
+            switchToBracket(meta.id);
+            hideDialog('brackets-dialog');
+          });
+
+          entries.appendChild(entry);
+        });
+      }
+
+      showDialog('brackets-dialog');
+    }
+
+    document.getElementById('new-bracket-btn').addEventListener('click', function() {
+      const newBr = createBracket(16, 'New Bracket');
+      state.bracket = newBr;
+      saveBracket(newBr);
+      fullRenderCurrentBracket();
+      hideDialog('brackets-dialog');
+    });
+
+    function switchToBracket(id) {
+      const bracket = loadBracket(id);
+      if (!bracket) return;
+      state.bracket = bracket;
+      fullRenderCurrentBracket();
+    }
+
+    function fullRenderCurrentBracket() {
       const bracket = state.bracket;
-      const font = bracket.titleFont;
-
+      const font = bracket.titleFont || 'sans-serif';
       function doRender() {
         applyBracketStyles(bracket);
         applyFont(bracket);
         renderBracket(bracket);
         document.getElementById('bracket-title').textContent = bracket.title;
       }
-
       if (isGoogleFont(font)) {
         loadGoogleFont(font).then(doRender);
       } else {
         doRender();
       }
+    }
+
+    // ── Wire saveBracket into existing state changes ──
+
+    // Patch confirmEdit
+    const _origConfirmEdit = confirmEdit;
+    confirmEdit = function() {
+      _origConfirmEdit();
+      saveBracket(state.bracket);
+    };
+
+    // Patch promote handler — we need to hook into renderBracket calls after state changes
+    // Instead, create a single patch on renderBracket that saves after every render
+    const _renderBeforeSave = renderBracket;
+    renderBracket = function(bracket) {
+      _renderBeforeSave(bracket);
+      // Save after render (which happens after every state change)
+      saveBracket(bracket);
+    };
+
+    // Also save on title edit
+    const _origTitleBlur = bracketTitleEl.onblur;
+    bracketTitleEl.addEventListener('blur', function() {
+      saveBracket(state.bracket);
+    });
+
+    // ── Initialize ─────────────────────────────────────────────────────────
+
+    (function initApp() {
+      const index = loadBracketIndex();
+      let bracket;
+
+      if (index.length > 0) {
+        // Load most recently updated
+        index.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+        bracket = loadBracket(index[0].id);
+      }
+
+      if (!bracket) {
+        bracket = createBracket(16, 'New Bracket');
+        saveBracket(bracket);
+      }
+
+      state.bracket = bracket;
+      fullRenderCurrentBracket();
     })();
   </script>
 
