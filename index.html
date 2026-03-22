@@ -652,6 +652,24 @@
       color: #374151;
       cursor: pointer;
     }
+
+    /* ── Drag and Drop ─────────────────────────────────────────────────── */
+    .cell.dragging {
+      opacity: 0.4;
+    }
+
+    .cell.drag-over {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
+
+    .cell[draggable="true"] {
+      cursor: grab;
+    }
+
+    .cell[draggable="true"]:active {
+      cursor: grabbing;
+    }
   </style>
 </head>
 <body>
@@ -1744,6 +1762,11 @@
             cellEl.style.overflow = 'visible';
             cellEl.appendChild(demoteBtn);
           }
+
+          // ── Draggable for first-round cells (pre-tournament) ──
+          if (round === 0 && !hasTournamentStarted(bracket)) {
+            cellEl.setAttribute('draggable', 'true');
+          }
         }
       });
     };
@@ -1964,6 +1987,87 @@
       if (!slot) return;
 
       slot.cellId = null;
+      renderBracket(bracket);
+    });
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Task 7: Drag and Drop (Pre-Tournament) ──────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+
+    let dragSourceSlotIndex = null;
+
+    document.getElementById('bracket-container').addEventListener('dragstart', function(e) {
+      const cellEl = e.target.closest('.cell');
+      if (!cellEl || !cellEl.hasAttribute('draggable')) return;
+
+      dragSourceSlotIndex = parseInt(cellEl.getAttribute('data-slot-index'), 10);
+      cellEl.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(dragSourceSlotIndex));
+    });
+
+    document.getElementById('bracket-container').addEventListener('dragend', function(e) {
+      const cellEl = e.target.closest('.cell');
+      if (cellEl) cellEl.classList.remove('dragging');
+      dragSourceSlotIndex = null;
+
+      // Remove all drag-over highlights
+      document.querySelectorAll('.cell.drag-over').forEach(el => el.classList.remove('drag-over'));
+    });
+
+    document.getElementById('bracket-container').addEventListener('dragover', function(e) {
+      if (dragSourceSlotIndex === null) return;
+
+      const cellEl = e.target.closest('.cell');
+      if (!cellEl) return;
+
+      const round = parseInt(cellEl.getAttribute('data-round'), 10);
+      if (round !== 0) return;
+
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      cellEl.classList.add('drag-over');
+    });
+
+    document.getElementById('bracket-container').addEventListener('dragleave', function(e) {
+      const cellEl = e.target.closest('.cell');
+      if (cellEl) cellEl.classList.remove('drag-over');
+    });
+
+    document.getElementById('bracket-container').addEventListener('drop', function(e) {
+      e.preventDefault();
+      if (dragSourceSlotIndex === null) return;
+
+      const cellEl = e.target.closest('.cell');
+      if (!cellEl) return;
+
+      const targetSlotIndex = parseInt(cellEl.getAttribute('data-slot-index'), 10);
+      const targetRound = parseInt(cellEl.getAttribute('data-round'), 10);
+      if (targetRound !== 0) return;
+      if (targetSlotIndex === dragSourceSlotIndex) return;
+
+      const bracket = state.bracket;
+      const sourceSlot = bracket.slots[dragSourceSlotIndex];
+      const targetSlot = bracket.slots[targetSlotIndex];
+
+      if (!sourceSlot) return;
+
+      // Swap or move
+      const sourceCellId = sourceSlot.cellId;
+      const targetCellId = targetSlot.cellId;
+
+      sourceSlot.cellId = targetCellId;
+      targetSlot.cellId = sourceCellId;
+
+      // Update sourceSlot fields on the cells
+      if (sourceCellId && bracket.cells[sourceCellId]) {
+        bracket.cells[sourceCellId].sourceSlot = targetSlotIndex;
+      }
+      if (targetCellId && bracket.cells[targetCellId]) {
+        bracket.cells[targetCellId].sourceSlot = dragSourceSlotIndex;
+      }
+
+      dragSourceSlotIndex = null;
       renderBracket(bracket);
     });
 
