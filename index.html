@@ -797,7 +797,237 @@
   </div>
 
   <script>
-    // JS goes here — added in later tasks
+    // ── Constants ────────────────────────────────────────────────────────────
+
+    const BRACKET_SIZES = [4, 8, 16, 32, 64, 128];
+
+    // 5 rows of 8: pastels, medium tones, vivid/saturated, very light tints, neutrals
+    const COLOR_PALETTE = [
+      // Row 1: Pastels
+      '#ffb3b3', '#ffcc99', '#fff099', '#b3ffb3', '#b3ffff', '#b3ccff', '#d9b3ff', '#ffb3e6',
+      // Row 2: Medium tones
+      '#ff8080', '#ff9f40', '#ffd700', '#66cc66', '#40bfbf', '#6699ff', '#b366ff', '#ff66b3',
+      // Row 3: Vivid/saturated
+      '#ff4d4d', '#ff8000', '#f0c800', '#33b833', '#00aaaa', '#3366ff', '#9933ff', '#ff3399',
+      // Row 4: Very light tints
+      '#fff0f0', '#fff5e6', '#fffde6', '#f0fff0', '#e6ffff', '#eef2ff', '#f5f0ff', '#fff0f9',
+      // Row 5: Neutrals
+      '#ffffff', '#f3f4f6', '#d1d5db', '#9ca3af', '#f5f0e8', '#e8dcc8', '#d4c4a0', '#c8b88a',
+    ];
+
+    const TEXT_COLORS = [
+      '#1a1a1a',
+      '#374151',
+      '#6b7280',
+      '#ffffff',
+      '#1e40af',
+      '#991b1b',
+      '#166534',
+    ];
+
+    const DEFAULT_FONTS = [
+      { name: 'Sans-serif',  family: 'sans-serif' },
+      { name: 'Serif',       family: 'serif' },
+      { name: 'Monospace',   family: 'monospace' },
+      { name: 'Cursive',     family: 'cursive' },
+      { name: 'Fantasy',     family: 'fantasy' },
+    ];
+
+    const GOOGLE_FONTS = [
+      'Inter',
+      'Roboto',
+      'Lato',
+      'Merriweather',
+      'Playfair Display',
+      'Oswald',
+      'Raleway',
+      'Nunito',
+      'Poppins',
+      'Bebas Neue',
+      'Pacifico',
+      'Bangers',
+      'Permanent Marker',
+      'Fredoka One',
+      'Righteous',
+    ];
+
+    const CELL_WIDTH  = 150;
+    const CELL_HEIGHT = 48;
+    const ROUND_GAP   = 60;
+    const CELL_GAP    = 8;
+
+    // ── State ────────────────────────────────────────────────────────────────
+
+    const state = {
+      bracket: null,
+    };
+
+    // ── Utility helpers ──────────────────────────────────────────────────────
+
+    function generateId() {
+      return Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // ── Factory functions ─────────────────────────────────────────────────────
+
+    function createBracket(size, title) {
+      const totalSlots = 2 * size - 1;
+      const slots = [];
+
+      for (let i = 0; i < totalSlots; i++) {
+        // Determine which round this flat index belongs to
+        let round = 0;
+        let offset = 0;
+        while (true) {
+          const slotsInRound = getSlotsInRound(size, round);
+          if (i < offset + slotsInRound) {
+            break;
+          }
+          offset += slotsInRound;
+          round++;
+        }
+        const indexInRound = i - getSlotOffset(size, round);
+        slots.push({ round, index: indexInRound, cellId: null });
+      }
+
+      const now = new Date().toISOString();
+      return {
+        id: generateId(),
+        title: title || 'My Bracket',
+        titleFont: 'sans-serif',
+        size,
+        backgroundColor: '#ffffff',
+        showSeedNumbers: true,
+        createdAt: now,
+        updatedAt: now,
+        cells: {},
+        slots,
+        zoomState: { focused: false, region: null },
+      };
+    }
+
+    function createCell(text, bgColor) {
+      return {
+        id: generateId(),
+        text: text || '',
+        textColor: getAutoTextColor(bgColor || '#ffffff'),
+        bgColor: bgColor || '#ffffff',
+        sourceSlot: null,
+      };
+    }
+
+    // ── Slot indexing math ────────────────────────────────────────────────────
+
+    /** How many slots are in a given round. */
+    function getSlotsInRound(size, round) {
+      return size >> round; // size / 2^round
+    }
+
+    /** Starting flat-array index for the first slot in a given round. */
+    function getSlotOffset(size, round) {
+      let offset = 0;
+      for (let r = 0; r < round; r++) {
+        offset += getSlotsInRound(size, r);
+      }
+      return offset;
+    }
+
+    /** Total number of rounds (including the 1-slot champion round). */
+    function getTotalRounds(size) {
+      return Math.log2(size) + 1;
+    }
+
+    /** Flat array index for a slot at a given round and position within that round. */
+    function getSlotIndex(size, round, indexInRound) {
+      return getSlotOffset(size, round) + indexInRound;
+    }
+
+    /**
+     * Returns the two flat slot indices from the previous round that feed into
+     * this slot.  Returns null for round 0 (no feeders).
+     */
+    function getMatchupPair(size, round, indexInRound) {
+      if (round === 0) return null;
+      const prevRound = round - 1;
+      const feederA   = indexInRound * 2;
+      const feederB   = indexInRound * 2 + 1;
+      return [
+        getSlotIndex(size, prevRound, feederA),
+        getSlotIndex(size, prevRound, feederB),
+      ];
+    }
+
+    /**
+     * Returns the { round, index } of the next slot this one promotes into.
+     * Returns null for the champion slot.
+     */
+    function getNextSlot(size, round, indexInRound) {
+      const totalRounds = getTotalRounds(size);
+      if (round >= totalRounds - 1) return null; // champion slot
+      return {
+        round: round + 1,
+        index: Math.floor(indexInRound / 2),
+      };
+    }
+
+    /**
+     * Returns true if this slot is in the left half of the bracket.
+     * For round 0: left half = first size/2 entries.
+     * For later rounds: follows whatever round-0 slots feed into it.
+     */
+    function isLeftHalf(size, round, indexInRound) {
+      if (round === 0) {
+        return indexInRound < size / 2;
+      }
+      // Trace back to round 0
+      let r   = round;
+      let idx = indexInRound;
+      while (r > 0) {
+        idx = idx * 2; // left-most feeder path
+        r--;
+      }
+      return idx < size / 2;
+    }
+
+    /** Flat index of the champion (final) slot. */
+    function getChampionSlotIndex(size) {
+      return 2 * size - 2;
+    }
+
+    // ── Contrast / colour helpers ─────────────────────────────────────────────
+
+    /** WCAG 2.1 relative luminance for a hex colour string. */
+    function getLuminance(hexColor) {
+      const hex = hexColor.replace('#', '');
+      const r   = parseInt(hex.substring(0, 2), 16) / 255;
+      const g   = parseInt(hex.substring(2, 4), 16) / 255;
+      const b   = parseInt(hex.substring(4, 6), 16) / 255;
+
+      const toLinear = c =>
+        c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+
+      return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    }
+
+    /** WCAG contrast ratio between two hex colours. */
+    function getContrastRatio(color1, color2) {
+      const l1 = getLuminance(color1);
+      const l2 = getLuminance(color2);
+      const lighter = Math.max(l1, l2);
+      const darker  = Math.min(l1, l2);
+      return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    /**
+     * Choose dark or light text colour based on the background.
+     * Uses dark text (#1a1a1a) when it achieves >= 4.5 contrast ratio,
+     * otherwise falls back to white.
+     */
+    function getAutoTextColor(bgColor) {
+      const darkText = '#1a1a1a';
+      const lightText = '#ffffff';
+      return getContrastRatio(bgColor, darkText) >= 4.5 ? darkText : lightText;
+    }
   </script>
 
 </body>
