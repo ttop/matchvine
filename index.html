@@ -1226,8 +1226,16 @@
       const totalRounds = getTotalRounds(size);
 
       container.innerHTML = '';
-      container.style.width = totalWidth + 'px';
-      container.style.height = totalHeight + 'px';
+      // Don't set container size — it stays at viewport size. Inner wrapper holds the bracket.
+
+      // Inner wrapper that holds everything and gets scaled to fit
+      const bracketInner = document.createElement('div');
+      bracketInner.id = 'bracket-inner';
+      bracketInner.style.position = 'relative';
+      bracketInner.style.width = totalWidth + 'px';
+      bracketInner.style.height = totalHeight + 'px';
+      bracketInner.style.transformOrigin = 'top left';
+      container.appendChild(bracketInner);
 
       // SVG for connector lines
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1237,7 +1245,7 @@
       svg.style.left = '0';
       svg.style.top = '0';
       svg.style.pointerEvents = 'none';
-      container.appendChild(svg);
+      bracketInner.appendChild(svg);
 
       // Wrapper for cells
       const cellWrapper = document.createElement('div');
@@ -1246,7 +1254,7 @@
       cellWrapper.style.top = '0';
       cellWrapper.style.width = totalWidth + 'px';
       cellWrapper.style.height = totalHeight + 'px';
-      container.appendChild(cellWrapper);
+      bracketInner.appendChild(cellWrapper);
 
       // -- Collect which cellIds appear in later rounds (for winner/loser styling) --
       const promotedCellIds = new Set();
@@ -3146,16 +3154,15 @@
 
     function scaleToFit() {
       const container = document.getElementById('bracket-container');
-      const inner = container.firstElementChild;
+      const inner = document.getElementById('bracket-inner');
       if (!inner) return;
 
       // Reset transform to measure natural size
-      container.style.transform = '';
-      container.style.transformOrigin = '';
+      inner.style.transform = '';
 
       const containerRect = container.getBoundingClientRect();
-      const contentWidth = parseInt(container.style.width) || container.scrollWidth;
-      const contentHeight = parseInt(container.style.height) || container.scrollHeight;
+      const contentWidth = parseInt(inner.style.width) || inner.scrollWidth;
+      const contentHeight = parseInt(inner.style.height) || inner.scrollHeight;
 
       if (contentWidth <= 0 || contentHeight <= 0) return;
 
@@ -3163,10 +3170,7 @@
       const scaleY = containerRect.height / contentHeight;
       const scale = Math.min(scaleX, scaleY, 1); // don't scale up beyond 1
 
-      if (scale < 1) {
-        container.style.transformOrigin = 'top left';
-        container.style.transform = `scale(${scale})`;
-      }
+      inner.style.transform = `scale(${scale})`;
     }
 
     // Patch renderBracket to add region overlays and scale
