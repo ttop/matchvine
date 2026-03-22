@@ -2442,6 +2442,61 @@
       renderBracket(bracket);
     });
 
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Task 11: Shuffle ──────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+
+    function shuffleFirstRound(bracket) {
+      const { size } = bracket;
+      // Collect all first-round cellIds
+      const cellIds = [];
+      for (let i = 0; i < size; i++) {
+        const slotIndex = getSlotIndex(size, 0, i);
+        cellIds.push(bracket.slots[slotIndex].cellId);
+      }
+
+      // Fisher-Yates shuffle
+      for (let i = cellIds.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cellIds[i], cellIds[j]] = [cellIds[j], cellIds[i]];
+      }
+
+      // Reassign
+      for (let i = 0; i < size; i++) {
+        const slotIndex = getSlotIndex(size, 0, i);
+        bracket.slots[slotIndex].cellId = cellIds[i];
+        if (cellIds[i] && bracket.cells[cellIds[i]]) {
+          bracket.cells[cellIds[i]].sourceSlot = slotIndex;
+        }
+      }
+
+      bracket.updatedAt = new Date().toISOString();
+    }
+
+    document.getElementById('btn-shuffle').addEventListener('click', function() {
+      const bracket = state.bracket;
+      if (hasTournamentStarted(bracket)) return;
+
+      if (!confirm('Shuffle all first-round matchups? This can\'t be undone.')) return;
+
+      shuffleFirstRound(bracket);
+      renderBracket(bracket);
+    });
+
+    // Patch renderBracket to manage shuffle button state
+    const _renderWithDrag = renderBracket;
+    renderBracket = function(bracket) {
+      _renderWithDrag(bracket);
+
+      // Enable/disable shuffle button
+      const shuffleBtn = document.getElementById('btn-shuffle');
+      if (hasTournamentStarted(bracket)) {
+        shuffleBtn.classList.add('disabled');
+      } else {
+        shuffleBtn.classList.remove('disabled');
+      }
+    };
+
     // ── Initialize ─────────────────────────────────────────────────────────
 
     state.bracket = createBracket(16, 'New Bracket');
