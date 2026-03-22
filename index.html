@@ -1029,6 +1029,400 @@
       const lightText = '#ffffff';
       return getContrastRatio(bgColor, darkText) >= 4.5 ? darkText : lightText;
     }
+
+    // ── Layout position calculator ─────────────────────────────────────────
+
+    function calculateLayout(bracket) {
+      const { size } = bracket;
+      const totalRounds = getTotalRounds(size);
+      const positions = [];
+
+      // Build a map keyed by slotIndex for easy lookup
+      const posMap = {};
+
+      // Half size for left/right split
+      const halfSize = size / 2;
+      const roundsPerHalf = Math.log2(halfSize) + 1; // rounds 0..roundsPerHalf-1 in each half
+
+      // Height of round-0 column in one half
+      const round0CountPerHalf = halfSize;
+      const round0Height = round0CountPerHalf * CELL_HEIGHT + (round0CountPerHalf - 1) * CELL_GAP;
+
+      // Total height: round-0 height + margin for labels
+      const LABEL_MARGIN = 40;
+      const TOP_PADDING = 20;
+      const totalHeight = round0Height + TOP_PADDING * 2 + LABEL_MARGIN;
+
+      // Champion cell width
+      const CHAMP_WIDTH = 170;
+
+      // Total width: left half columns + gap + champion + gap + right half columns
+      const leftCols = roundsPerHalf;
+      const rightCols = roundsPerHalf;
+      const CENTER_GAP = ROUND_GAP;
+      const totalWidth = leftCols * (CELL_WIDTH + ROUND_GAP) + CENTER_GAP + CHAMP_WIDTH + CENTER_GAP + rightCols * (CELL_WIDTH + ROUND_GAP);
+
+      // Champion x position: center
+      const championX = leftCols * (CELL_WIDTH + ROUND_GAP) + CENTER_GAP;
+
+      // --- Place round 0 cells for LEFT half (indices 0..halfSize-1) ---
+      for (let i = 0; i < halfSize; i++) {
+        const slotIndex = getSlotIndex(size, 0, i);
+        const y = TOP_PADDING + i * (CELL_HEIGHT + CELL_GAP);
+        const x = 0;
+        const pos = {
+          slotIndex,
+          round: 0,
+          indexInRound: i,
+          x,
+          y,
+          isLeftHalf: true,
+          isChampion: false,
+        };
+        positions.push(pos);
+        posMap[slotIndex] = pos;
+      }
+
+      // --- Place round 0 cells for RIGHT half (indices halfSize..size-1) ---
+      const rightEdgeX = totalWidth - CELL_WIDTH;
+      for (let i = halfSize; i < size; i++) {
+        const slotIndex = getSlotIndex(size, 0, i);
+        const y = TOP_PADDING + (i - halfSize) * (CELL_HEIGHT + CELL_GAP);
+        const x = rightEdgeX;
+        const pos = {
+          slotIndex,
+          round: 0,
+          indexInRound: i,
+          x,
+          y,
+          isLeftHalf: false,
+          isChampion: false,
+        };
+        positions.push(pos);
+        posMap[slotIndex] = pos;
+      }
+
+      // --- Place rounds 1+ for both halves (not champion) ---
+      for (let round = 1; round < totalRounds - 1; round++) {
+        const slotsInRound = getSlotsInRound(size, round);
+        for (let idx = 0; idx < slotsInRound; idx++) {
+          const slotIndex = getSlotIndex(size, round, idx);
+          const leftHalf = isLeftHalf(size, round, idx);
+          const feeders = getMatchupPair(size, round, idx);
+          const feederA = posMap[feeders[0]];
+          const feederB = posMap[feeders[1]];
+          const y = (feederA.y + feederB.y) / 2;
+
+          let x;
+          if (leftHalf) {
+            x = round * (CELL_WIDTH + ROUND_GAP);
+          } else {
+            // For right half, figure out which "column index from right" this is
+            // Right half round 0 is at rightEdgeX. Round 1 is one step left, etc.
+            // We need to know which local round within the right half this is.
+            // Right half round-0 indices start at halfSize.
+            // For round R in right half, local column = R (same as round number, since
+            // both halves share the same round numbers)
+            x = rightEdgeX - round * (CELL_WIDTH + ROUND_GAP);
+          }
+
+          const pos = {
+            slotIndex,
+            round,
+            indexInRound: idx,
+            x,
+            y,
+            isLeftHalf: leftHalf,
+            isChampion: false,
+          };
+          positions.push(pos);
+          posMap[slotIndex] = pos;
+        }
+      }
+
+      // --- Place champion slot ---
+      {
+        const champRound = totalRounds - 1;
+        const slotIndex = getChampionSlotIndex(size);
+        const feeders = getMatchupPair(size, champRound, 0);
+        const feederA = posMap[feeders[0]];
+        const feederB = posMap[feeders[1]];
+        const y = (feederA.y + feederB.y) / 2;
+        const pos = {
+          slotIndex,
+          round: champRound,
+          indexInRound: 0,
+          x: championX,
+          y,
+          isLeftHalf: false,
+          isChampion: true,
+        };
+        positions.push(pos);
+        posMap[slotIndex] = pos;
+      }
+
+      return { positions, posMap, totalWidth, totalHeight, championX, CHAMP_WIDTH };
+    }
+
+    // ── Bracket rendering ──────────────────────────────────────────────────
+
+    function renderBracket(bracket) {
+      const container = document.getElementById('bracket-container');
+      const layout = calculateLayout(bracket);
+      const { positions, posMap, totalWidth, totalHeight, championX, CHAMP_WIDTH } = layout;
+      const { size } = bracket;
+      const totalRounds = getTotalRounds(size);
+
+      container.innerHTML = '';
+      container.style.width = totalWidth + 'px';
+      container.style.height = totalHeight + 'px';
+
+      // SVG for connector lines
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', totalWidth);
+      svg.setAttribute('height', totalHeight);
+      svg.style.position = 'absolute';
+      svg.style.left = '0';
+      svg.style.top = '0';
+      svg.style.pointerEvents = 'none';
+      container.appendChild(svg);
+
+      // Wrapper for cells
+      const cellWrapper = document.createElement('div');
+      cellWrapper.style.position = 'absolute';
+      cellWrapper.style.left = '0';
+      cellWrapper.style.top = '0';
+      cellWrapper.style.width = totalWidth + 'px';
+      cellWrapper.style.height = totalHeight + 'px';
+      container.appendChild(cellWrapper);
+
+      // -- Collect which cellIds appear in later rounds (for winner/loser styling) --
+      const promotedCellIds = new Set();
+      for (let round = 1; round < totalRounds; round++) {
+        const slotsInRound = getSlotsInRound(size, round);
+        for (let idx = 0; idx < slotsInRound; idx++) {
+          const slotIndex = getSlotIndex(size, round, idx);
+          const slot = bracket.slots[slotIndex];
+          if (slot && slot.cellId) {
+            promotedCellIds.add(slot.cellId);
+          }
+        }
+      }
+      // Champion slot
+      const champSlot = bracket.slots[getChampionSlotIndex(size)];
+      if (champSlot && champSlot.cellId) {
+        promotedCellIds.add(champSlot.cellId);
+      }
+
+      // -- Render cells --
+      for (const pos of positions) {
+        const slot = bracket.slots[pos.slotIndex];
+        const cellEl = document.createElement('div');
+        cellEl.className = 'cell';
+
+        const isChamp = pos.isChampion;
+        const cellWidth = isChamp ? CHAMP_WIDTH : CELL_WIDTH;
+
+        if (!slot || !slot.cellId) {
+          cellEl.classList.add('cell-empty');
+        }
+        if (isChamp) {
+          cellEl.classList.add('cell-champion');
+        }
+
+        cellEl.style.left = pos.x + 'px';
+        cellEl.style.top = pos.y + 'px';
+        cellEl.style.width = cellWidth + 'px';
+        cellEl.style.height = CELL_HEIGHT + 'px';
+        cellEl.setAttribute('data-slot-index', pos.slotIndex);
+        cellEl.setAttribute('data-round', pos.round);
+        cellEl.setAttribute('data-index-in-round', pos.indexInRound);
+
+        if (slot && slot.cellId && bracket.cells[slot.cellId]) {
+          const cell = bracket.cells[slot.cellId];
+          cellEl.style.backgroundColor = cell.bgColor || '#ffffff';
+          cellEl.style.color = cell.textColor || '#1a1a1a';
+
+          // Check for winner/loser styling in round-0 feeder context
+          if (pos.round < totalRounds - 1 && promotedCellIds.has(slot.cellId)) {
+            // This cell has been promoted to a later round — check if it won from this slot
+            const next = getNextSlot(size, pos.round, pos.indexInRound);
+            if (next) {
+              const nextSlotIndex = getSlotIndex(size, next.round, next.index);
+              const nextSlot = bracket.slots[nextSlotIndex];
+              if (nextSlot && nextSlot.cellId === slot.cellId) {
+                cellEl.classList.add('cell-winner');
+              } else if (nextSlot && nextSlot.cellId && nextSlot.cellId !== slot.cellId) {
+                cellEl.classList.add('cell-loser');
+              }
+            }
+          }
+
+          // Display text with line break support
+          const textContent = cell.text || '';
+          if (isChamp) {
+            cellEl.innerHTML = '<span style="margin-right:4px">🏆</span>' + textContent.replace(/\n/g, '<br>');
+          } else {
+            cellEl.innerHTML = textContent.replace(/\n/g, '<br>');
+          }
+        } else {
+          // Empty slot
+          if (isChamp) {
+            cellEl.innerHTML = '🏆 ?';
+          } else {
+            cellEl.textContent = '?';
+          }
+        }
+
+        cellWrapper.appendChild(cellEl);
+      }
+
+      // -- Draw connector lines --
+      const strokeColor = '#9ca3af';
+      const strokeWidth = '1.5';
+
+      function svgLine(x1, y1, x2, y2) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', strokeColor);
+        line.setAttribute('stroke-width', strokeWidth);
+        svg.appendChild(line);
+      }
+
+      for (const pos of positions) {
+        if (pos.round === 0) continue;
+
+        const feeders = getMatchupPair(size, pos.round, pos.indexInRound);
+        if (!feeders) continue;
+
+        const feederA = posMap[feeders[0]];
+        const feederB = posMap[feeders[1]];
+        if (!feederA || !feederB) continue;
+
+        const cellWidth = pos.isChampion ? CHAMP_WIDTH : CELL_WIDTH;
+        const midY = pos.y + CELL_HEIGHT / 2;
+        const feederAMidY = feederA.y + CELL_HEIGHT / 2;
+        const feederBMidY = feederB.y + CELL_HEIGHT / 2;
+
+        if (pos.isChampion) {
+          // Champion: feeders come from both halves
+          // Left semi-final: connector from right edge to champion left edge
+          const leftFeeder = feederA.isLeftHalf ? feederA : feederB;
+          const rightFeeder = feederA.isLeftHalf ? feederB : feederA;
+
+          // Left feeder -> champion
+          const ljx = leftFeeder.x + CELL_WIDTH + (pos.x - (leftFeeder.x + CELL_WIDTH)) / 2;
+          const leftMidY = leftFeeder.y + CELL_HEIGHT / 2;
+          svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, ljx, leftMidY);
+          svgLine(ljx, leftMidY, ljx, midY);
+          svgLine(ljx, midY, pos.x, midY);
+
+          // Right feeder -> champion
+          const rjx = rightFeeder.x - (rightFeeder.x - (pos.x + CHAMP_WIDTH)) / 2;
+          const rightMidY = rightFeeder.y + CELL_HEIGHT / 2;
+          svgLine(rightFeeder.x, rightMidY, rjx, rightMidY);
+          svgLine(rjx, rightMidY, rjx, midY);
+          svgLine(rjx, midY, pos.x + CHAMP_WIDTH, midY);
+
+        } else if (pos.isLeftHalf) {
+          // Left half: horizontal from right edge of feeders -> vertical -> horizontal to current cell left edge
+          const jx = feederA.x + CELL_WIDTH + (pos.x - (feederA.x + CELL_WIDTH)) / 2;
+          svgLine(feederA.x + CELL_WIDTH, feederAMidY, jx, feederAMidY);
+          svgLine(feederB.x + CELL_WIDTH, feederBMidY, jx, feederBMidY);
+          svgLine(jx, feederAMidY, jx, feederBMidY);
+          svgLine(jx, midY, pos.x, midY);
+
+        } else {
+          // Right half: horizontal from left edge of feeders -> vertical -> horizontal to current cell right edge
+          const jx = feederA.x - (feederA.x - (pos.x + CELL_WIDTH)) / 2;
+          svgLine(feederA.x, feederAMidY, jx, feederAMidY);
+          svgLine(feederB.x, feederBMidY, jx, feederBMidY);
+          svgLine(jx, feederAMidY, jx, feederBMidY);
+          svgLine(jx, midY, pos.x + CELL_WIDTH, midY);
+        }
+      }
+
+      // -- Round labels --
+      const halfSize = size / 2;
+      const roundsPerHalf = Math.log2(halfSize) + 1;
+      const labelY = totalHeight - 30;
+
+      function getRoundLabel(round, totalRoundsCount) {
+        if (round === totalRoundsCount - 1) return 'Final';
+        if (round === totalRoundsCount - 2) return 'Semis';
+        return 'Round ' + (round + 1);
+      }
+
+      // Left half labels
+      for (let r = 0; r < roundsPerHalf; r++) {
+        const labelEl = document.createElement('div');
+        labelEl.className = 'round-label';
+        const x = r * (CELL_WIDTH + ROUND_GAP);
+        labelEl.style.left = x + 'px';
+        labelEl.style.top = labelY + 'px';
+        labelEl.style.width = CELL_WIDTH + 'px';
+        labelEl.textContent = getRoundLabel(r, totalRounds);
+        cellWrapper.appendChild(labelEl);
+      }
+
+      // Champion label
+      {
+        const labelEl = document.createElement('div');
+        labelEl.className = 'round-label';
+        labelEl.style.left = championX + 'px';
+        labelEl.style.top = labelY + 'px';
+        labelEl.style.width = CHAMP_WIDTH + 'px';
+        labelEl.textContent = 'Final';
+        cellWrapper.appendChild(labelEl);
+      }
+
+      // Right half labels (mirrored)
+      const rightEdgeX = totalWidth - CELL_WIDTH;
+      for (let r = 0; r < roundsPerHalf; r++) {
+        const labelEl = document.createElement('div');
+        labelEl.className = 'round-label';
+        const x = rightEdgeX - r * (CELL_WIDTH + ROUND_GAP);
+        labelEl.style.left = x + 'px';
+        labelEl.style.top = labelY + 'px';
+        labelEl.style.width = CELL_WIDTH + 'px';
+        labelEl.textContent = getRoundLabel(r, totalRounds);
+        cellWrapper.appendChild(labelEl);
+      }
+
+      // -- Seed numbers --
+      if (bracket.showSeedNumbers) {
+        for (let i = 0; i < size; i++) {
+          const slotIndex = getSlotIndex(size, 0, i);
+          const slot = bracket.slots[slotIndex];
+          if (!slot || !slot.cellId) continue;
+
+          const pos = posMap[slotIndex];
+          if (!pos) continue;
+
+          const seedEl = document.createElement('div');
+          seedEl.className = 'seed-number';
+          seedEl.textContent = '#' + (i + 1);
+          seedEl.style.top = (pos.y + CELL_HEIGHT / 2 - 6) + 'px';
+
+          if (pos.isLeftHalf) {
+            seedEl.style.left = (pos.x - 22) + 'px';
+          } else {
+            seedEl.style.left = (pos.x + CELL_WIDTH + 4) + 'px';
+          }
+
+          cellWrapper.appendChild(seedEl);
+        }
+      }
+    }
+
+    // ── Initialize ─────────────────────────────────────────────────────────
+
+    state.bracket = createBracket(16, 'New Bracket');
+    renderBracket(state.bracket);
+    document.getElementById('bracket-title').textContent = state.bracket.title;
   </script>
 
 </body>
