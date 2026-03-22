@@ -1608,8 +1608,8 @@
         return;
       }
 
-      // Ignore clicks on format icon or promote button
-      if (e.target.closest('.format-icon') || e.target.closest('.promote-btn')) {
+      // Ignore clicks on format icon, promote button, or demote button
+      if (e.target.closest('.format-icon') || e.target.closest('.promote-btn') || e.target.closest('.demote-btn')) {
         return;
       }
 
@@ -1670,19 +1670,23 @@
 
     state.formattingSlotIndex = null;
 
-    // Patch renderBracket to add format icons to filled cells
+    // Patch renderBracket to add format icons, promote/demote buttons
     const _renderWithText = renderBracket;
     renderBracket = function(bracket) {
       _renderWithText(bracket);
 
       const container = document.getElementById('bracket-container');
+      const { size } = bracket;
+      const totalRounds = getTotalRounds(size);
 
       container.querySelectorAll('.cell').forEach(cellEl => {
         const slotIndex = parseInt(cellEl.getAttribute('data-slot-index'), 10);
+        const round = parseInt(cellEl.getAttribute('data-round'), 10);
+        const indexInRound = parseInt(cellEl.getAttribute('data-index-in-round'), 10);
         const slot = bracket.slots[slotIndex];
 
-        // Add format icon for filled cells
         if (slot && slot.cellId && bracket.cells[slot.cellId]) {
+          // ── Format icon ──
           const formatIcon = document.createElement('span');
           formatIcon.className = 'format-icon';
           formatIcon.textContent = '🎨';
@@ -1690,6 +1694,56 @@
             ev.stopPropagation();
           });
           cellEl.appendChild(formatIcon);
+
+          // ── Promote buttons ──
+          if (round < totalRounds - 1) {
+            const next = getNextSlot(size, round, indexInRound);
+            if (next) {
+              const nextSlotIndex = getSlotIndex(size, next.round, next.index);
+              const nextSlot = bracket.slots[nextSlotIndex];
+
+              // Check matchup pair: both cells must be filled
+              const feeders = getMatchupPair(size, next.round, next.index);
+              if (feeders) {
+                const slotA = bracket.slots[feeders[0]];
+                const slotB = bracket.slots[feeders[1]];
+                const bothFilled = slotA && slotA.cellId && bracket.cells[slotA.cellId]
+                                && slotB && slotB.cellId && bracket.cells[slotB.cellId];
+
+                if (bothFilled && (!nextSlot || !nextSlot.cellId)) {
+                  const promoteBtn = document.createElement('div');
+                  promoteBtn.className = 'promote-btn';
+                  promoteBtn.setAttribute('data-action', 'promote');
+                  promoteBtn.setAttribute('data-slot-index', slotIndex);
+
+                  const leftHalf = isLeftHalf(size, round, indexInRound);
+                  if (leftHalf) {
+                    promoteBtn.textContent = '›';
+                    promoteBtn.style.right = '-13px';
+                    promoteBtn.style.top = (CELL_HEIGHT / 2 - 13) + 'px';
+                  } else {
+                    promoteBtn.textContent = '‹';
+                    promoteBtn.style.left = '-13px';
+                    promoteBtn.style.top = (CELL_HEIGHT / 2 - 13) + 'px';
+                  }
+
+                  cellEl.style.overflow = 'visible';
+                  cellEl.appendChild(promoteBtn);
+                }
+              }
+            }
+          }
+
+          // ── Demote button for promoted cells (round > 0) ──
+          if (round > 0) {
+            const demoteBtn = document.createElement('div');
+            demoteBtn.className = 'demote-btn';
+            demoteBtn.setAttribute('data-action', 'demote');
+            demoteBtn.setAttribute('data-slot-index', slotIndex);
+            demoteBtn.textContent = '×';
+            cellEl.style.overflow = 'visible';
+            cellEl.appendChild(demoteBtn);
+          }
         }
       });
     };
@@ -1854,6 +1908,63 @@
       if (e.key === 'Escape' && state.formattingSlotIndex !== null) {
         hideFormatPopover();
       }
+    });
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Task 6: Promote and Demote ───────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════
+
+    function hasTournamentStarted(bracket) {
+      const { size } = bracket;
+      const totalRounds = getTotalRounds(size);
+      for (let round = 1; round < totalRounds; round++) {
+        const slotsInRound = getSlotsInRound(size, round);
+        for (let idx = 0; idx < slotsInRound; idx++) {
+          const slotIndex = getSlotIndex(size, round, idx);
+          const slot = bracket.slots[slotIndex];
+          if (slot && slot.cellId) return true;
+        }
+      }
+      return false;
+    }
+
+    // Promote handler (delegation)
+    document.getElementById('bracket-container').addEventListener('click', function(e) {
+      const promoteBtn = e.target.closest('.promote-btn');
+      if (!promoteBtn) return;
+      e.stopPropagation();
+
+      const bracket = state.bracket;
+      const slotIndex = parseInt(promoteBtn.getAttribute('data-slot-index'), 10);
+      const slot = bracket.slots[slotIndex];
+      if (!slot || !slot.cellId) return;
+
+      const round = slot.round;
+      const indexInRound = slot.index;
+      const next = getNextSlot(bracket.size, round, indexInRound);
+      if (!next) return;
+
+      const nextSlotIndex = getSlotIndex(bracket.size, next.round, next.index);
+      const nextSlot = bracket.slots[nextSlotIndex];
+      if (nextSlot.cellId) return; // already occupied
+
+      nextSlot.cellId = slot.cellId;
+      renderBracket(bracket);
+    });
+
+    // Demote handler (delegation)
+    document.getElementById('bracket-container').addEventListener('click', function(e) {
+      const demoteBtn = e.target.closest('.demote-btn');
+      if (!demoteBtn) return;
+      e.stopPropagation();
+
+      const bracket = state.bracket;
+      const slotIndex = parseInt(demoteBtn.getAttribute('data-slot-index'), 10);
+      const slot = bracket.slots[slotIndex];
+      if (!slot) return;
+
+      slot.cellId = null;
+      renderBracket(bracket);
     });
 
     // ── Initialize ─────────────────────────────────────────────────────────
