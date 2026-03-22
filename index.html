@@ -861,6 +861,9 @@
     const CELL_HEIGHT = 48;
     const ROUND_GAP   = 60;
     const CELL_GAP    = 8;
+    const CHAMP_WIDTH = 170;
+    const TOP_PADDING = 20;
+    const LABEL_MARGIN = 40;
 
     // ── State ────────────────────────────────────────────────────────────────
 
@@ -1036,6 +1039,10 @@
       return getContrastRatio(bgColor, darkText) >= 4.5 ? darkText : lightText;
     }
 
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
     // ── Layout position calculator ─────────────────────────────────────────
 
     function calculateLayout(bracket) {
@@ -1055,21 +1062,16 @@
       const round0Height = round0CountPerHalf * CELL_HEIGHT + (round0CountPerHalf - 1) * CELL_GAP;
 
       // Total height: round-0 height + margin for labels
-      const LABEL_MARGIN = 40;
-      const TOP_PADDING = 20;
       const totalHeight = round0Height + TOP_PADDING * 2 + LABEL_MARGIN;
-
-      // Champion cell width
-      const CHAMP_WIDTH = 170;
 
       // Total width: left half columns + gap + champion + gap + right half columns
       const leftCols = roundsPerHalf;
       const rightCols = roundsPerHalf;
       const CENTER_GAP = ROUND_GAP;
-      const totalWidth = leftCols * (CELL_WIDTH + ROUND_GAP) + CENTER_GAP + CHAMP_WIDTH + CENTER_GAP + rightCols * (CELL_WIDTH + ROUND_GAP);
+      const totalWidth = leftCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + CENTER_GAP + CHAMP_WIDTH + CENTER_GAP + rightCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP;
 
       // Champion x position: center
-      const championX = leftCols * (CELL_WIDTH + ROUND_GAP) + CENTER_GAP;
+      const championX = leftCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + CENTER_GAP;
 
       // --- Place round 0 cells for LEFT half (indices 0..halfSize-1) ---
       for (let i = 0; i < halfSize; i++) {
@@ -1214,12 +1216,6 @@
           }
         }
       }
-      // Champion slot
-      const champSlot = bracket.slots[getChampionSlotIndex(size)];
-      if (champSlot && champSlot.cellId) {
-        promotedCellIds.add(champSlot.cellId);
-      }
-
       // -- Render cells --
       for (const pos of positions) {
         const slot = bracket.slots[pos.slotIndex];
@@ -1266,10 +1262,11 @@
 
           // Display text with line break support
           const textContent = cell.text || '';
+          const safeText = escapeHtml(textContent).replace(/\n/g, '<br>');
           if (isChamp) {
-            cellEl.innerHTML = '<span style="margin-right:4px">🏆</span>' + textContent.replace(/\n/g, '<br>');
+            cellEl.innerHTML = '<span style="margin-right:4px">🏆</span>' + safeText;
           } else {
-            cellEl.innerHTML = textContent.replace(/\n/g, '<br>');
+            cellEl.innerHTML = safeText;
           }
         } else {
           // Empty slot
