@@ -30,6 +30,7 @@ showSeedNumbers boolean   Whether to display seed numbers on first-round slots
 createdAt       string    ISO timestamp
 updatedAt       string    ISO timestamp
 slots           Slot[]    Flat array of all slots (2N - 1 total)
+cells           Map<id,Cell>  All cells in the bracket, keyed by cell ID
 zoomState       object    Which region is focused (or full view), persisted per bracket
 ```
 
@@ -192,6 +193,8 @@ Accessed via ⚙️ Settings button in the toolbar. Dialog contains:
 - **Bracket Background**: Small palette of whites, light grays, and soft tinted options (no dark backgrounds)
 - **Show Seed Numbers**: Toggle switch
 
+**Changing bracket size**: Changing the size creates a new empty bracket (same title and settings). If the current bracket has data, a confirmation dialog warns that existing data will be lost. This is a destructive operation — use "Save Bracket" first if needed.
+
 ## Toolbar
 
 Always visible at the top of the page. Contains:
@@ -268,6 +271,7 @@ No arbitrary zoom/pan. Navigation is structured:
 - Includes the title at the top
 - Captures all cell colors, fonts, connecting lines, champion styling
 - Downloads as `{bracket-title}.png`
+- Hand-rolled using the Canvas API (no external library) to maintain the zero-dependency constraint
 
 ## Technical Notes
 
