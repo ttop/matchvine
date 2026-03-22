@@ -2071,9 +2071,180 @@
       renderBracket(bracket);
     });
 
+    // ══════════════════════════════════════════════════════════════════════
+    // ── Task 8: Toolbar Title Editing + Settings Dialog ────────────────
+    // ══════════════════════════════════════════════════════════════════════
+
+    // ── Inline title editing ──
+
+    const bracketTitleEl = document.getElementById('bracket-title');
+    let titleBeforeEdit = '';
+
+    bracketTitleEl.addEventListener('focus', function() {
+      titleBeforeEdit = this.textContent;
+    });
+
+    bracketTitleEl.addEventListener('blur', function() {
+      const newTitle = this.textContent.trim();
+      if (newTitle && newTitle !== titleBeforeEdit) {
+        state.bracket.title = newTitle;
+        state.bracket.updatedAt = new Date().toISOString();
+      } else if (!newTitle) {
+        this.textContent = titleBeforeEdit;
+      }
+    });
+
+    bracketTitleEl.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.blur();
+      } else if (e.key === 'Escape') {
+        this.textContent = titleBeforeEdit;
+        this.blur();
+      }
+    });
+
+    // ── Dialog helpers ──
+
+    function showDialog(dialogId) {
+      document.getElementById(dialogId).classList.remove('hidden');
+      document.getElementById('dialog-overlay').classList.remove('hidden');
+    }
+
+    function hideDialog(dialogId) {
+      document.getElementById(dialogId).classList.add('hidden');
+      document.getElementById('dialog-overlay').classList.add('hidden');
+    }
+
+    function hideAllDialogs() {
+      ['settings-dialog', 'seed-dialog', 'brackets-dialog'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById('dialog-overlay').classList.add('hidden');
+    }
+
+    // ── Settings dialog ──
+
+    const BACKGROUND_COLORS = [
+      '#ffffff', '#f9fafb', '#f3f4f6', '#e5e7eb',
+      '#fef3c7', '#ecfdf5', '#eff6ff',
+    ];
+
+    document.getElementById('btn-settings').addEventListener('click', function() {
+      openSettingsDialog();
+    });
+
+    function openSettingsDialog() {
+      const bracket = state.bracket;
+
+      // Highlight current size
+      document.querySelectorAll('#size-toggles .size-toggle').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.getAttribute('data-size'), 10) === bracket.size);
+      });
+
+      // Populate background color grid
+      const bgGrid = document.getElementById('settings-bg-color-grid');
+      bgGrid.innerHTML = '';
+      BACKGROUND_COLORS.forEach(color => {
+        const swatch = document.createElement('div');
+        swatch.className = 'color-swatch';
+        swatch.style.backgroundColor = color;
+        swatch.setAttribute('data-color', color);
+        if (bracket.backgroundColor === color) swatch.classList.add('selected');
+        bgGrid.appendChild(swatch);
+      });
+
+      // Seed numbers toggle
+      document.getElementById('toggle-seed-numbers').checked = bracket.showSeedNumbers;
+
+      showDialog('settings-dialog');
+    }
+
+    // Settings close button
+    document.getElementById('settings-dialog-close').addEventListener('click', function() {
+      hideDialog('settings-dialog');
+    });
+
+    // Close on overlay click
+    document.getElementById('dialog-overlay').addEventListener('click', function() {
+      hideAllDialogs();
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        hideAllDialogs();
+      }
+    });
+
+    // ── Bracket size selection ──
+
+    document.getElementById('size-toggles').addEventListener('click', function(e) {
+      const btn = e.target.closest('.size-toggle');
+      if (!btn) return;
+
+      const newSize = parseInt(btn.getAttribute('data-size'), 10);
+      const bracket = state.bracket;
+      if (newSize === bracket.size) return;
+
+      // Check if bracket has data
+      const hasData = Object.keys(bracket.cells).length > 0;
+      if (hasData) {
+        if (!confirm('Changing size will clear all bracket data. Continue?')) return;
+      }
+
+      const newBracket = createBracket(newSize, bracket.title);
+      newBracket.titleFont = bracket.titleFont;
+      newBracket.backgroundColor = bracket.backgroundColor;
+      newBracket.showSeedNumbers = bracket.showSeedNumbers;
+      state.bracket = newBracket;
+
+      // Update size toggle highlights
+      document.querySelectorAll('#size-toggles .size-toggle').forEach(b => {
+        b.classList.toggle('active', parseInt(b.getAttribute('data-size'), 10) === newSize);
+      });
+
+      applyBracketStyles(state.bracket);
+      renderBracket(state.bracket);
+      document.getElementById('bracket-title').textContent = state.bracket.title;
+    });
+
+    // ── Bracket background color ──
+
+    document.getElementById('settings-bg-color-grid').addEventListener('click', function(e) {
+      const swatch = e.target.closest('.color-swatch');
+      if (!swatch) return;
+
+      const color = swatch.getAttribute('data-color');
+      state.bracket.backgroundColor = color;
+      state.bracket.updatedAt = new Date().toISOString();
+
+      // Update selected state
+      this.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+
+      applyBracketStyles(state.bracket);
+    });
+
+    // ── Seed numbers toggle ──
+
+    document.getElementById('toggle-seed-numbers').addEventListener('change', function() {
+      state.bracket.showSeedNumbers = this.checked;
+      state.bracket.updatedAt = new Date().toISOString();
+      renderBracket(state.bracket);
+    });
+
+    // ── Apply bracket styles helper ──
+
+    function applyBracketStyles(bracket) {
+      const container = document.getElementById('bracket-container');
+      container.style.backgroundColor = bracket.backgroundColor || '#ffffff';
+    }
+
     // ── Initialize ─────────────────────────────────────────────────────────
 
     state.bracket = createBracket(16, 'New Bracket');
+    applyBracketStyles(state.bracket);
     renderBracket(state.bracket);
     document.getElementById('bracket-title').textContent = state.bracket.title;
   </script>
