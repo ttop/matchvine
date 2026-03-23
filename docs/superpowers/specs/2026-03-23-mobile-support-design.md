@@ -22,7 +22,8 @@ Instead of rendering the full bracket, mobile shows a single matchup as a full-w
 ### Navigation
 
 **Round tabs** across the top of the screen:
-- Horizontal strip: Round 1, Quarterfinals, Semifinals, Finals, 🏆
+- Horizontal strip: Round 1, Quarterfinals, Semifinals, Finals, 🏆 (Champion)
+- 🏆 is its own tab for the champion cell, separate from Finals
 - Current round highlighted
 - Tap to jump to any round
 
@@ -37,14 +38,15 @@ Instead of rendering the full bracket, mobile shows a single matchup as a full-w
 
 ### Promoting
 
-Dedicated "Winner" button below each cell in the matchup card. Tap the button to promote that competitor to the next round. No ambiguity between editing and promoting.
+Dedicated "Winner" button below each cell in the matchup card. Tap the button to promote that competitor to the next round. Tapping the cell body (the colored area with text) opens the text editor. Tapping the "Winner" button promotes. These are distinct, separate touch targets.
 
 ### Text Editing
 
-Tapping a cell opens a **bottom sheet** with:
+Tapping the cell body opens a **bottom sheet** with:
 - A real `<input>` or `<textarea>` element (not contenteditable)
 - The cell's current text pre-filled
 - Save and Cancel buttons
+- Swipe down to dismiss (same as Cancel)
 - Native mobile keyboard works reliably
 
 ### Color Picker
@@ -56,7 +58,11 @@ Tapping the palette icon opens a **bottom sheet** sliding up from the bottom:
 
 ### Seeding
 
-The seed dialog adapts to full-screen on mobile. Textarea takes full width, Import button is large and tappable.
+Mobile reimplements the seed dialog as a full-screen panel (in `js/mobile.js`, not modifying `js/dialogs.js`). Textarea takes full width, Import button is large and tappable.
+
+### File Export/Import
+
+File export/import (.bracket files) is available on mobile through the Brackets panel. Save and Load buttons work the same as desktop — the browser handles file downloads and the file picker natively on mobile.
 
 ## Settings
 
