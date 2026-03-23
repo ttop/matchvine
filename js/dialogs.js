@@ -91,9 +91,10 @@ export function hideDialog(dialogId) {
 }
 
 export function hideAllDialogs() {
-  ['settings-dialog', 'seed-dialog', 'brackets-dialog', 'new-bracket-dialog'].forEach(id => {
+  ['settings-dialog', 'seed-dialog', 'new-bracket-dialog'].forEach(id => {
     document.getElementById(id).classList.add('hidden');
   });
+  document.getElementById('brackets-dropdown').classList.add('hidden');
   document.getElementById('dialog-overlay').classList.add('hidden');
 }
 
@@ -301,9 +302,23 @@ export function openSeedDialog() {
   textarea.focus();
 }
 
-// ── Brackets Dialog ──────────────────────────────────────────────────────
+// ── Brackets Dropdown ────────────────────────────────────────────────────
 
-export function openBracketsDialog() {
+export function closeBracketsDropdown() {
+  document.getElementById('brackets-dropdown').classList.add('hidden');
+}
+
+export function toggleBracketsDropdown() {
+  const dropdown = document.getElementById('brackets-dropdown');
+  if (!dropdown.classList.contains('hidden')) {
+    dropdown.classList.add('hidden');
+    return;
+  }
+  _populateBracketsDropdown();
+  dropdown.classList.remove('hidden');
+}
+
+function _populateBracketsDropdown() {
   const entries = document.getElementById('bracket-entries');
   entries.innerHTML = '';
 
@@ -311,14 +326,14 @@ export function openBracketsDialog() {
   index.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
   if (index.length === 0) {
-    entries.innerHTML = '<p style="font-size:13px;color:#9ca3af;text-align:center;padding:16px 0">No saved brackets yet.</p>';
+    entries.innerHTML = '<p class="brackets-dropdown-empty">No saved brackets yet.</p>';
   } else {
     index.forEach(meta => {
       const entry = document.createElement('div');
       entry.className = 'bracket-entry';
+      entry.dataset.bracketId = meta.id;
       if (state.bracket && meta.id === state.bracket.id) {
-        entry.style.borderColor = '#3b82f6';
-        entry.style.background = '#eff6ff';
+        entry.classList.add('bracket-entry-active');
       }
       entry.setAttribute('tabindex', '0');
 
@@ -343,12 +358,12 @@ export function openBracketsDialog() {
             const tempBr = createBracket(16, 'New Bracket');
             state.bracket = tempBr;
             _fullRenderCurrentBracket();
-            hideDialog('brackets-dialog');
+            closeBracketsDropdown();
             openNewBracketDialog();
             return;
           }
         }
-        openBracketsDialog(); // refresh list
+        _populateBracketsDropdown(); // refresh list
       });
 
       entry.appendChild(left);
@@ -356,14 +371,15 @@ export function openBracketsDialog() {
 
       entry.addEventListener('click', function() {
         switchToBracket(meta.id);
-        hideDialog('brackets-dialog');
+        // Update active highlight without re-sorting the list
+        entries.querySelectorAll('.bracket-entry').forEach(el => {
+          el.classList.toggle('bracket-entry-active', el.dataset.bracketId === meta.id);
+        });
       });
 
       entries.appendChild(entry);
     });
   }
-
-  showDialog('brackets-dialog');
 }
 
 function switchToBracket(id) {
@@ -866,17 +882,28 @@ export function setupDialogEvents(storageFns) {
     renderBracket(bracket);
   });
 
-  // ── Brackets dialog ──
-  document.getElementById('btn-brackets').addEventListener('click', function() {
-    openBracketsDialog();
+  // ── Brackets dropdown ──
+  document.getElementById('btn-brackets').addEventListener('click', function(e) {
+    e.stopPropagation();
+    toggleBracketsDropdown();
   });
 
-  document.getElementById('brackets-dialog-close').addEventListener('click', function() {
-    hideDialog('brackets-dialog');
+  document.getElementById('brackets-dropdown').addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+
+  document.addEventListener('click', function() {
+    closeBracketsDropdown();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeBracketsDropdown();
+    }
   });
 
   document.getElementById('new-bracket-btn').addEventListener('click', function() {
-    hideDialog('brackets-dialog');
+    closeBracketsDropdown();
     openNewBracketDialog();
   });
 
