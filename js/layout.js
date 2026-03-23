@@ -165,8 +165,8 @@ function layoutStaggered(bracket) {
   const round0Height = numPairs * pairHeight + (numPairs - 1) * PAIR_GAP;
   const totalHeight = round0Height + TOP_PADDING * 2 + LABEL_MARGIN;
 
-  // Horizontal offset: full cell width + small gap (no horizontal overlap)
-  const STAGGER_X = CELL_WIDTH + STAGGER_GAP;
+  // Horizontal offset: ~60% of cell width so winner nestles between feeders
+  const STAGGER_X = Math.floor(CELL_WIDTH * 0.6);
 
   // Total width for one half: round 0 starts at left, each subsequent round shifts right by STAGGER_X
   const halfWidth = CELL_WIDTH + (roundsPerHalf - 1) * STAGGER_X;

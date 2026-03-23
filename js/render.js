@@ -278,6 +278,8 @@ export function renderBracket(bracket, options) {
     svg.appendChild(line);
   }
 
+  const isStaggered = bracket.layoutMode === 'staggered';
+
   for (const pos of positions) {
     if (pos.round === 0) continue;
 
@@ -293,7 +295,26 @@ export function renderBracket(bracket, options) {
     const feederAMidY = feederA.y + CELL_HEIGHT / 2;
     const feederBMidY = feederB.y + CELL_HEIGHT / 2;
 
-    if (pos.isChampion) {
+    if (isStaggered && !pos.isChampion) {
+      // Staggered lines: from feeder right edge to winner's top/bottom horizontal midpoint
+      const winnerMidX = pos.x + CELL_WIDTH / 2;
+
+      if (pos.isLeftHalf) {
+        // Top feeder: right edge → winner's top edge midpoint
+        svgLine(feederA.x + CELL_WIDTH, feederAMidY, feederA.x + CELL_WIDTH, pos.y);
+        svgLine(feederA.x + CELL_WIDTH, pos.y, winnerMidX, pos.y);
+        // Bottom feeder: right edge → winner's bottom edge midpoint
+        svgLine(feederB.x + CELL_WIDTH, feederBMidY, feederB.x + CELL_WIDTH, pos.y + CELL_HEIGHT);
+        svgLine(feederB.x + CELL_WIDTH, pos.y + CELL_HEIGHT, winnerMidX, pos.y + CELL_HEIGHT);
+      } else {
+        // Right half: left edges
+        svgLine(feederA.x, feederAMidY, feederA.x, pos.y);
+        svgLine(feederA.x, pos.y, winnerMidX, pos.y);
+        svgLine(feederB.x, feederBMidY, feederB.x, pos.y + CELL_HEIGHT);
+        svgLine(feederB.x, pos.y + CELL_HEIGHT, winnerMidX, pos.y + CELL_HEIGHT);
+      }
+
+    } else if (pos.isChampion) {
       const leftFeeder = feederA.isLeftHalf ? feederA : feederB;
       const rightFeeder = feederA.isLeftHalf ? feederB : feederA;
 
