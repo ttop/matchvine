@@ -158,6 +158,28 @@ export function renderBracket(bracket, options) {
     }
   }
 
+  // Collect loser cellIds — cells that lost a matchup (opponent was promoted instead)
+  const loserCellIds = new Set();
+  for (let round = 1; round < totalRounds; round++) {
+    const slotsInRound = getSlotsInRound(size, round);
+    for (let idx = 0; idx < slotsInRound; idx++) {
+      const slotIndex = getSlotIndex(size, round, idx);
+      const slot = bracket.slots[slotIndex];
+      if (slot && slot.cellId) {
+        // This slot has a winner — find the feeders and mark the loser
+        const feeders = getMatchupPair(size, round, idx);
+        if (feeders) {
+          for (const feederIdx of feeders) {
+            const feederSlot = bracket.slots[feederIdx];
+            if (feederSlot && feederSlot.cellId && feederSlot.cellId !== slot.cellId) {
+              loserCellIds.add(feederSlot.cellId);
+            }
+          }
+        }
+      }
+    }
+  }
+
   const tournamentStarted = hasTournamentStarted(bracket);
 
   // ── 5. Render cells ──
@@ -195,15 +217,16 @@ export function renderBracket(bracket, options) {
       cellEl.style.color = cell.textColor || '#1a1a1a';
 
       // Winner/loser styling
-      if (pos.round < totalRounds - 1 && promotedCellIds.has(slot.cellId)) {
+      // Check if this cell lost — its cellId appears in a matchup where a different cell was promoted
+      if (loserCellIds.has(slot.cellId)) {
+        cellEl.classList.add('cell-loser');
+      } else if (pos.round < totalRounds - 1 && promotedCellIds.has(slot.cellId)) {
         const next = getNextSlot(size, pos.round, pos.indexInRound);
         if (next) {
           const nextSlotIndex = getSlotIndex(size, next.round, next.index);
           const nextSlot = bracket.slots[nextSlotIndex];
           if (nextSlot && nextSlot.cellId === slot.cellId) {
             cellEl.classList.add('cell-winner');
-          } else if (nextSlot && nextSlot.cellId && nextSlot.cellId !== slot.cellId) {
-            cellEl.classList.add('cell-loser');
           }
         }
       }
