@@ -367,7 +367,7 @@ function _populateBracketsDropdown() {
 
       entry.addEventListener('click', function() {
         switchToBracket(meta.id);
-        closeBracketsDropdown();
+        _populateBracketsDropdown(); // refresh to show new active state
       });
 
       entries.appendChild(entry);
