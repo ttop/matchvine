@@ -371,7 +371,7 @@ function switchToBracket(id) {
   if (!bracket) return;
   state.bracket = bracket;
   _fullRenderCurrentBracket();
-  if (_updateHash) _updateHash();
+  if (_updateHash) _updateHash(true);
 }
 
 // ── New Bracket Dialog ───────────────────────────────────────────────────
@@ -396,7 +396,7 @@ function createNewBracketFromDialog() {
   _saveBracket(newBr);
   _fullRenderCurrentBracket();
   hideDialog('new-bracket-dialog');
-  if (_updateHash) _updateHash();
+  if (_updateHash) _updateHash(true);
 }
 
 // ── Shuffle ──────────────────────────────────────────────────────────────

@@ -36,16 +36,32 @@ function doFullRender() {
 
 // ── URL hash ────────────────────────────────────────────────────────────
 
-function updateHash() {
+function updateHash(push = false) {
   const index = loadBracketIndex();
   const { idToSlug } = buildSlugMap(index);
   const slug = state.bracket ? idToSlug.get(state.bracket.id) : null;
+  const method = push ? 'pushState' : 'replaceState';
   if (slug) {
-    history.replaceState(null, '', '#' + slug);
+    history[method](null, '', '#' + slug);
   } else {
-    history.replaceState(null, '', location.pathname + location.search);
+    history[method](null, '', location.pathname + location.search);
   }
 }
+
+function loadBracketFromHash() {
+  const hash = location.hash.replace(/^#/, '');
+  if (!hash) return;
+  const index = loadBracketIndex();
+  const { slugToId } = buildSlugMap(index);
+  const id = slugToId.get(hash);
+  if (!id || (state.bracket && state.bracket.id === id)) return;
+  const bracket = loadBracket(id);
+  if (!bracket) return;
+  state.bracket = bracket;
+  doFullRender();
+}
+
+window.addEventListener('popstate', loadBracketFromHash);
 
 // ── Initialize ───────────────────────────────────────────────────────────
 
@@ -91,7 +107,7 @@ document.getElementById('load-file-input').addEventListener('change', function(e
     state.bracket = data;
     saveBracket(data);
     doFullRender();
-    updateHash();
+    updateHash(true);
   });
 
   // Reset so the same file can be loaded again
