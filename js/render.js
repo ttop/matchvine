@@ -296,22 +296,22 @@ export function renderBracket(bracket, options) {
     const feederBMidY = feederB.y + CELL_HEIGHT / 2;
 
     if (isStaggered && !pos.isChampion) {
-      // Staggered lines: from feeder right edge to winner's top/bottom horizontal midpoint
+      // Staggered lines: horizontal from feeder edge to winner midX, then vertical to winner edge
       const winnerMidX = pos.x + CELL_WIDTH / 2;
 
       if (pos.isLeftHalf) {
-        // Top feeder: right edge → winner's top edge midpoint
-        svgLine(feederA.x + CELL_WIDTH, feederAMidY, feederA.x + CELL_WIDTH, pos.y);
-        svgLine(feederA.x + CELL_WIDTH, pos.y, winnerMidX, pos.y);
-        // Bottom feeder: right edge → winner's bottom edge midpoint
-        svgLine(feederB.x + CELL_WIDTH, feederBMidY, feederB.x + CELL_WIDTH, pos.y + CELL_HEIGHT);
-        svgLine(feederB.x + CELL_WIDTH, pos.y + CELL_HEIGHT, winnerMidX, pos.y + CELL_HEIGHT);
+        // Top feeder: horizontal right to winnerMidX, then vertical down to winner top
+        svgLine(feederA.x + CELL_WIDTH, feederAMidY, winnerMidX, feederAMidY);
+        svgLine(winnerMidX, feederAMidY, winnerMidX, pos.y);
+        // Bottom feeder: horizontal right to winnerMidX, then vertical up to winner bottom
+        svgLine(feederB.x + CELL_WIDTH, feederBMidY, winnerMidX, feederBMidY);
+        svgLine(winnerMidX, feederBMidY, winnerMidX, pos.y + CELL_HEIGHT);
       } else {
-        // Right half: left edges
-        svgLine(feederA.x, feederAMidY, feederA.x, pos.y);
-        svgLine(feederA.x, pos.y, winnerMidX, pos.y);
-        svgLine(feederB.x, feederBMidY, feederB.x, pos.y + CELL_HEIGHT);
-        svgLine(feederB.x, pos.y + CELL_HEIGHT, winnerMidX, pos.y + CELL_HEIGHT);
+        // Right half: horizontal left to winnerMidX, then vertical
+        svgLine(feederA.x, feederAMidY, winnerMidX, feederAMidY);
+        svgLine(winnerMidX, feederAMidY, winnerMidX, pos.y);
+        svgLine(feederB.x, feederBMidY, winnerMidX, feederBMidY);
+        svgLine(winnerMidX, feederBMidY, winnerMidX, pos.y + CELL_HEIGHT);
       }
 
     } else if (pos.isChampion) {
