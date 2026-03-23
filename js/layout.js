@@ -219,8 +219,10 @@ function layoutStaggered(bracket) {
       const feederA = posMap[feeders[0]]; // top feeder
       const feederB = posMap[feeders[1]]; // bottom feeder
 
-      // Nest between feeders: y sits just below feeder A's bottom edge
-      const y = feederA.y + CELL_HEIGHT + NEST_GAP;
+      // Nest centered between feeders: midpoint of the gap between a's bottom and b's top
+      const gapTop = feederA.y + CELL_HEIGHT; // bottom edge of top feeder
+      const gapBottom = feederB.y;             // top edge of bottom feeder
+      const y = gapTop + (gapBottom - gapTop - CELL_HEIGHT) / 2;
 
       let x;
       if (leftHalf) {
