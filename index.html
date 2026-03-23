@@ -539,6 +539,17 @@
       color: #1d4ed8;
     }
 
+    .settings-toggle-row-inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 24px;
+    }
+
+    .settings-toggle-row-inline .settings-toggle-row {
+      justify-content: flex-start;
+      gap: 10px;
+    }
+
     .settings-toggle-row {
       display: flex;
       align-items: center;
@@ -555,6 +566,7 @@
       position: relative;
       width: 36px;
       height: 20px;
+      flex-shrink: 0;
     }
 
     .toggle-switch input {
@@ -863,27 +875,28 @@
 
       <div class="settings-section">
         <div class="settings-section-label">Options</div>
-        <div class="settings-toggle-row">
-          <label class="toggle-label" for="toggle-seed-numbers">Show seed numbers</label>
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggle-seed-numbers">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="settings-toggle-row" style="margin-top: 8px;">
-          <label class="toggle-label" for="toggle-auto-color">Auto-color new cells</label>
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggle-auto-color">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-label">Layout</div>
-        <div class="layout-toggles" id="layout-toggles">
-          <button class="size-toggle active" data-layout="staggered">Compact</button>
-          <button class="size-toggle" data-layout="full">Wide</button>
+        <div class="settings-toggle-row-inline">
+          <div class="settings-toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-seed-numbers">
+              <span class="toggle-slider"></span>
+            </label>
+            <label class="toggle-label" for="toggle-seed-numbers">Seed numbers</label>
+          </div>
+          <div class="settings-toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-auto-color">
+              <span class="toggle-slider"></span>
+            </label>
+            <label class="toggle-label" for="toggle-auto-color">Auto-color cells</label>
+          </div>
+          <div class="settings-toggle-row hidden">
+            <span class="toggle-label">Layout</span>
+            <div class="layout-toggles" id="layout-toggles">
+              <button class="size-toggle active" data-layout="staggered">Compact</button>
+              <button class="size-toggle" data-layout="full">Wide</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -953,27 +966,28 @@
 
       <div class="settings-section">
         <div class="settings-section-label">Options</div>
-        <div class="settings-toggle-row">
-          <label class="toggle-label" for="new-bracket-toggle-seed-numbers">Show seed numbers</label>
-          <label class="toggle-switch">
-            <input type="checkbox" id="new-bracket-toggle-seed-numbers" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="settings-toggle-row" style="margin-top: 8px;">
-          <label class="toggle-label" for="new-bracket-toggle-auto-color">Auto-color new cells</label>
-          <label class="toggle-switch">
-            <input type="checkbox" id="new-bracket-toggle-auto-color" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-label">Layout</div>
-        <div class="layout-toggles" id="new-bracket-layout-toggles">
-          <button class="size-toggle active" data-layout="staggered">Compact</button>
-          <button class="size-toggle" data-layout="full">Wide</button>
+        <div class="settings-toggle-row-inline">
+          <div class="settings-toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="new-bracket-toggle-seed-numbers" checked>
+              <span class="toggle-slider"></span>
+            </label>
+            <label class="toggle-label" for="new-bracket-toggle-seed-numbers">Seed numbers</label>
+          </div>
+          <div class="settings-toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="new-bracket-toggle-auto-color" checked>
+              <span class="toggle-slider"></span>
+            </label>
+            <label class="toggle-label" for="new-bracket-toggle-auto-color">Auto-color cells</label>
+          </div>
+          <div class="settings-toggle-row hidden">
+            <span class="toggle-label">Layout</span>
+            <div class="layout-toggles" id="new-bracket-layout-toggles">
+              <button class="size-toggle active" data-layout="staggered">Compact</button>
+              <button class="size-toggle" data-layout="full">Wide</button>
+            </div>
+          </div>
         </div>
       </div>
 
