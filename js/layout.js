@@ -227,9 +227,15 @@ function layoutStaggered(bracket) {
         // Left semi: just above the bottom feeder (between feeders, closer to center)
         // Right semi: just below the top feeder (between feeders, closer to center)
         if (leftHalf) {
-          y = feederB.y - CELL_HEIGHT; // bottom edge aligns with bottom feeder's top edge
+          // Align bottom edge with the top edge of feederB's top sub-feeder
+          const subFeeders = getMatchupPair(size, feederB.round, feederB.indexInRound);
+          const subTop = subFeeders ? posMap[subFeeders[0]] : feederB;
+          y = subTop.y - CELL_HEIGHT;
         } else {
-          y = feederA.y + CELL_HEIGHT; // top edge aligns with top feeder's bottom edge
+          // Align top edge with the bottom edge of feederA's bottom sub-feeder
+          const subFeeders = getMatchupPair(size, feederA.round, feederA.indexInRound);
+          const subBottom = subFeeders ? posMap[subFeeders[1]] : feederA;
+          y = subBottom.y + CELL_HEIGHT;
         }
       } else {
         // Normal rounds: nest centered between feeders
