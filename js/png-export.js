@@ -44,7 +44,7 @@ function renderBracketToCanvas(bracket) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#111827';
-  ctx.font = `600 36px "${fontFamily}", sans-serif`;
+  ctx.font = `400 36px "${fontFamily}", sans-serif`;
   ctx.fillText(bracket.title || 'Untitled Bracket', canvasWidth / 2, PADDING + TITLE_HEIGHT / 2 - 5);
 
   // Collect promoted cell IDs for winner/loser styling
