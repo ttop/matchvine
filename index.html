@@ -1647,28 +1647,34 @@
     function enterEditMode(slotIndex) {
       const bracket = state.bracket;
       const slot = bracket.slots[slotIndex];
-
       const wasEmpty = !slot.cellId;
 
-      // If empty slot, create a new cell first
+      // If empty slot, create a cell in the data model but DON'T re-render.
+      // Instead, modify the existing DOM cell directly.
       if (wasEmpty) {
         const color = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
         const newCell = createCell('', color);
         bracket.cells[newCell.id] = newCell;
         slot.cellId = newCell.id;
-        // Re-render to show the new cell with its color
-        renderBracket(bracket);
       }
 
       state.editingSlotIndex = slotIndex;
       const cell = bracket.cells[slot.cellId];
       state.beforeEditText = cell ? cell.text : '';
 
-      // Find the cell in the DOM (renderBracket already ran synchronously above if needed)
+      // Directly modify the existing DOM cell (no re-render!)
       const container = document.getElementById('bracket-container');
       const cellEl = container.querySelector(`.cell[data-slot-index="${slotIndex}"]`);
       if (!cellEl) return;
 
+      // Apply color directly to DOM
+      if (wasEmpty) {
+        cellEl.style.backgroundColor = cell.bgColor;
+        cellEl.style.color = cell.textColor;
+        cellEl.classList.remove('cell-empty');
+      }
+
+      // Get or create the text span
       let textEl = cellEl.querySelector('.cell-text');
       if (!textEl) {
         textEl = document.createElement('span');
@@ -1677,16 +1683,17 @@
         cellEl.appendChild(textEl);
       }
 
-      // Clear the "?" placeholder for empty cells
-      if (wasEmpty) textEl.textContent = '';
+      // Clear placeholder text
+      if (wasEmpty || textEl.textContent === '?') {
+        textEl.textContent = '';
+      }
 
       cellEl.classList.add('cell-editing');
-      cellEl.classList.remove('cell-empty');
       textEl.contentEditable = 'true';
       textEl.spellcheck = false;
       textEl.setAttribute('spellcheck', 'false');
 
-      // Intercept Enter key on the contenteditable element (capture phase)
+      // Keydown handler for Enter/Escape
       textEl.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
@@ -1695,11 +1702,11 @@
           confirmEdit();
         } else if (e.key === 'Escape') {
           e.preventDefault();
-          // Revert
+          e.stopPropagation();
           const bracket = state.bracket;
           const slot = bracket.slots[state.editingSlotIndex];
           if (slot && slot.cellId && bracket.cells[slot.cellId]) {
-            if (state.beforeEditText === '' || state.beforeEditText === null) {
+            if (!state.beforeEditText) {
               delete bracket.cells[slot.cellId];
               slot.cellId = null;
             } else {
@@ -1711,16 +1718,8 @@
         }
       }, true);
 
-      // Focus with a short delay to ensure DOM is settled after render patches
-      setTimeout(() => {
-        textEl.focus();
-        const range = document.createRange();
-        const sel = window.getSelection();
-        range.selectNodeContents(textEl);
-        range.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }, 50);
+      // Focus immediately — no setTimeout needed since we didn't re-render
+      textEl.focus();
     }
 
     // ── Patch renderBracket to use .cell-text spans and call autoSizeText ─
