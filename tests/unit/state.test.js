@@ -12,6 +12,7 @@ import {
   hasTournamentStarted,
   getBracketSeedOrder,
   getSlotIndex,
+  getQuadrantSeedRank,
 } from '../../js/state.js';
 
 describe('slot indexing', () => {
@@ -120,35 +121,65 @@ describe('getBracketSeedOrder', () => {
     expect(unique.size).toBe(16);
   });
 
-  it('seed #1 and #2 are in opposite halves for size 16', () => {
-    const order = getBracketSeedOrder(16);
-    const slot1 = order[0]; // seed #1
-    const slot2 = order[1]; // seed #2
-    // Slot indices 0-7 are left half, 8-15 are right half
-    const seed1Left = slot1 < 8;
-    const seed2Left = slot2 < 8;
-    expect(seed1Left).not.toBe(seed2Left);
+  it('distributes seeds round-robin across 4 quadrants for size 64', () => {
+    const order = getBracketSeedOrder(64);
+    // First 4 entries should be the seed-1 slot for each of the 4 quadrants
+    // Quadrant boundaries: Q1=0-15, Q2=16-31, Q3=32-47, Q4=48-63 (round-0 indices)
+    const quadrantOf = (slotIndex) => Math.floor(slotIndex / 16);
+    // Each group of 4 consecutive entries should hit all 4 quadrants
+    const q1Seeds = new Set([quadrantOf(order[0]), quadrantOf(order[1]), quadrantOf(order[2]), quadrantOf(order[3])]);
+    expect(q1Seeds.size).toBe(4); // all 4 quadrants represented
   });
 
-  it('seed #1 plays seed #16 (adjacent slots in same matchup) for size 16', () => {
-    const order = getBracketSeedOrder(16);
-    const slot1 = order[0];   // seed #1
-    const slot16 = order[15]; // seed #16 (last in left half would be index 15 but interleaved)
-    // Actually seed #1 is at order[0], seed #16 should be its matchup partner
-    // In left half, matchup partners are adjacent: slot i and slot i^1
-    // Find where seed 16 ended up — it should be the partner of seed 1
-    // Seed 1 goes to order[0], its partner slot is order[0] ^ ...
-    // Actually with interleaving, left seeds are at even indices, right at odd
-    // Left half seed 1 → order[0], left half seed 16 → they should be adjacent slots
-    // Let's just check the left half has #1 vs last seed
-    const leftOrder = [];
-    for (let i = 0; i < order.length; i += 2) leftOrder.push(order[i]);
-    // leftOrder[0] = seed #1 slot, leftOrder[1] = seed #2 slot, etc but wait
-    // Actually leftOrder has halfSize entries representing seeds 1..halfSize for left half
-    // seed #1 and seed #halfSize should be matchup partners (adjacent slots)
-    const s1 = leftOrder[0];
-    const sLast = leftOrder[leftOrder.length - 1];
-    // They should be in the same matchup: their slot indices should differ by 1 (XOR 1)
-    expect(s1 ^ 1).toBe(sLast); // partners in the same matchup
+  it('seed 1 plays seed Q within each quadrant (1 vs last)', () => {
+    const size = 64;
+    const order = getBracketSeedOrder(size);
+    const quadrantSize = 16;
+    // For Q1 (round-0 indices 0-15): seed 1 and seed 16 should be matchup partners
+    // Collect Q1 slots from the order (every 4th starting at 0)
+    const q1Slots = [];
+    for (let i = 0; i < order.length; i += 4) q1Slots.push(order[i]);
+    // q1Slots[0] = Q1 seed 1, q1Slots[15] = Q1 seed 16
+    // They should be in the same matchup (adjacent slots, XOR 1)
+    expect(q1Slots[0] ^ 1).toBe(q1Slots[q1Slots.length - 1]);
+  });
+
+  it('uses 2 halves for size 4', () => {
+    const order = getBracketSeedOrder(4);
+    expect(order.length).toBe(4);
+    const unique = new Set(order);
+    expect(unique.size).toBe(4);
+  });
+});
+
+describe('getQuadrantSeedRank', () => {
+  it('returns seeds 1-16 for each quadrant in a 64-bracket', () => {
+    for (let q = 0; q < 4; q++) {
+      const seeds = [];
+      for (let i = 0; i < 16; i++) {
+        seeds.push(getQuadrantSeedRank(64, q * 16 + i));
+      }
+      seeds.sort((a, b) => a - b);
+      expect(seeds).toEqual(Array.from({ length: 16 }, (_, i) => i + 1));
+    }
+  });
+
+  it('seed 1 plays seed 16 (adjacent positions) in each quadrant', () => {
+    // Position 0 in each quadrant should be seed 1, position 1 should be seed 16
+    for (let q = 0; q < 4; q++) {
+      expect(getQuadrantSeedRank(64, q * 16 + 0)).toBe(1);
+      expect(getQuadrantSeedRank(64, q * 16 + 1)).toBe(16);
+    }
+  });
+
+  it('returns seeds 1-4 for each quadrant in a 16-bracket', () => {
+    for (let q = 0; q < 4; q++) {
+      const seeds = [];
+      for (let i = 0; i < 4; i++) {
+        seeds.push(getQuadrantSeedRank(16, q * 4 + i));
+      }
+      seeds.sort((a, b) => a - b);
+      expect(seeds).toEqual([1, 2, 3, 4]);
+    }
   });
 });

@@ -5,7 +5,7 @@ import {
 } from './constants.js';
 import {
   getSlotsInRound, getSlotIndex, getTotalRounds,
-  getMatchupPair, getNextSlot, isLeftHalf,
+  getMatchupPair, getNextSlot, isLeftHalf, getQuadrantSeedRank,
 } from './state.js';
 
 // ── renderBracketToCanvas (private) ──────────────────────────────────────
@@ -280,7 +280,7 @@ function renderBracketToCanvas(bracket) {
   // Champion label
   ctx.fillText('Champion', ox + layout.championX + CHAMP_WIDTH / 2, labelY);
 
-  // Seed numbers
+  // Seed numbers (per-quadrant)
   if (bracket.showSeedNumbers) {
     ctx.fillStyle = '#9ca3af';
     ctx.font = '12px sans-serif';
@@ -288,7 +288,7 @@ function renderBracketToCanvas(bracket) {
       const slotIndex = getSlotIndex(size, 0, i);
       const pos = posMap[slotIndex];
       if (!pos) continue;
-      const label = '#' + (i + 1);
+      const label = '#' + getQuadrantSeedRank(size, i);
       if (pos.isLeftHalf) {
         ctx.textAlign = 'right';
         ctx.fillText(label, ox + pos.x - 4, oy + pos.y + CELL_HEIGHT / 2);

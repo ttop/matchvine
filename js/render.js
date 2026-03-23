@@ -6,7 +6,7 @@ import {
 import {
   getSlotsInRound, getSlotIndex, getTotalRounds,
   getMatchupPair, getNextSlot, getChampionSlotIndex,
-  isLeftHalf, hasTournamentStarted, getBracketSeedOrder,
+  isLeftHalf, hasTournamentStarted, getQuadrantSeedRank,
 } from './state.js';
 import { escapeHtml } from './utils.js';
 
@@ -504,15 +504,8 @@ export function renderBracket(bracket, options) {
     cellWrapper.appendChild(labelEl);
   }
 
-  // ── 8. Seed numbers ──
+  // ── 8. Seed numbers (per-quadrant) ──
   if (bracket.showSeedNumbers) {
-    // Build reverse map: slot index → seed rank (1-based)
-    const seedOrder = getBracketSeedOrder(size);
-    const seedRankForSlot = {};
-    for (let rank = 0; rank < seedOrder.length; rank++) {
-      seedRankForSlot[seedOrder[rank]] = rank + 1;
-    }
-
     for (let i = 0; i < size; i++) {
       const slotIndex = getSlotIndex(size, 0, i);
       const pos = posMap[slotIndex];
@@ -520,7 +513,7 @@ export function renderBracket(bracket, options) {
 
       const seedEl = document.createElement('div');
       seedEl.className = 'seed-number';
-      seedEl.textContent = '#' + (seedRankForSlot[slotIndex] || (i + 1));
+      seedEl.textContent = '#' + getQuadrantSeedRank(size, i);
       seedEl.style.top = (pos.y + CELL_HEIGHT / 2 - 7) + 'px';
 
       if (pos.isLeftHalf) {
