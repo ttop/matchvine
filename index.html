@@ -541,12 +541,12 @@
 
     .settings-toggle-row-inline {
       display: flex;
-      gap: 20px;
+      gap: 24px;
     }
 
     .settings-toggle-row-inline .settings-toggle-row {
       justify-content: flex-start;
-      gap: 8px;
+      gap: 10px;
     }
 
     .settings-toggle-row {
@@ -565,6 +565,7 @@
       position: relative;
       width: 36px;
       height: 20px;
+      flex-shrink: 0;
     }
 
     .toggle-switch input {
@@ -875,25 +876,27 @@
         <div class="settings-section-label">Options</div>
         <div class="settings-toggle-row-inline">
           <div class="settings-toggle-row">
-            <label class="toggle-label" for="toggle-seed-numbers">Show seed numbers</label>
             <label class="toggle-switch">
               <input type="checkbox" id="toggle-seed-numbers">
               <span class="toggle-slider"></span>
             </label>
+            <label class="toggle-label" for="toggle-seed-numbers">Show seed numbers</label>
           </div>
           <div class="settings-toggle-row">
-            <label class="toggle-label" for="toggle-auto-color">Auto-color new cells</label>
             <label class="toggle-switch">
               <input type="checkbox" id="toggle-auto-color">
               <span class="toggle-slider"></span>
             </label>
+            <label class="toggle-label" for="toggle-auto-color">Auto-color new cells</label>
           </div>
         </div>
-        <div class="settings-toggle-row" style="margin-top: 10px;">
-          <span class="toggle-label">Layout</span>
-          <div class="layout-toggles" id="layout-toggles">
-            <button class="size-toggle active" data-layout="staggered">Compact</button>
-            <button class="size-toggle" data-layout="full">Wide</button>
+        <div class="settings-toggle-row-inline" style="margin-top: 10px;">
+          <div class="settings-toggle-row">
+            <span class="toggle-label">Layout</span>
+            <div class="layout-toggles" id="layout-toggles">
+              <button class="size-toggle active" data-layout="staggered">Compact</button>
+              <button class="size-toggle" data-layout="full">Wide</button>
+            </div>
           </div>
         </div>
       </div>
@@ -966,25 +969,27 @@
         <div class="settings-section-label">Options</div>
         <div class="settings-toggle-row-inline">
           <div class="settings-toggle-row">
-            <label class="toggle-label" for="new-bracket-toggle-seed-numbers">Show seed numbers</label>
             <label class="toggle-switch">
               <input type="checkbox" id="new-bracket-toggle-seed-numbers" checked>
               <span class="toggle-slider"></span>
             </label>
+            <label class="toggle-label" for="new-bracket-toggle-seed-numbers">Show seed numbers</label>
           </div>
           <div class="settings-toggle-row">
-            <label class="toggle-label" for="new-bracket-toggle-auto-color">Auto-color new cells</label>
             <label class="toggle-switch">
               <input type="checkbox" id="new-bracket-toggle-auto-color" checked>
               <span class="toggle-slider"></span>
             </label>
+            <label class="toggle-label" for="new-bracket-toggle-auto-color">Auto-color new cells</label>
           </div>
         </div>
-        <div class="settings-toggle-row" style="margin-top: 10px;">
-          <span class="toggle-label">Layout</span>
-          <div class="layout-toggles" id="new-bracket-layout-toggles">
-            <button class="size-toggle active" data-layout="staggered">Compact</button>
-            <button class="size-toggle" data-layout="full">Wide</button>
+        <div class="settings-toggle-row-inline" style="margin-top: 10px;">
+          <div class="settings-toggle-row">
+            <span class="toggle-label">Layout</span>
+            <div class="layout-toggles" id="new-bracket-layout-toggles">
+              <button class="size-toggle active" data-layout="staggered">Compact</button>
+              <button class="size-toggle" data-layout="full">Wide</button>
+            </div>
           </div>
         </div>
       </div>
