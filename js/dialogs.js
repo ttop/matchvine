@@ -328,6 +328,7 @@ function _populateBracketsDropdown() {
     index.forEach(meta => {
       const entry = document.createElement('div');
       entry.className = 'bracket-entry';
+      entry.dataset.bracketId = meta.id;
       if (state.bracket && meta.id === state.bracket.id) {
         entry.classList.add('bracket-entry-active');
       }
@@ -367,7 +368,10 @@ function _populateBracketsDropdown() {
 
       entry.addEventListener('click', function() {
         switchToBracket(meta.id);
-        _populateBracketsDropdown(); // refresh to show new active state
+        // Update active highlight without re-sorting the list
+        entries.querySelectorAll('.bracket-entry').forEach(el => {
+          el.classList.toggle('bracket-entry-active', el.dataset.bracketId === meta.id);
+        });
       });
 
       entries.appendChild(entry);
