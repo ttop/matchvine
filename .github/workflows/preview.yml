@@ -41,9 +41,9 @@ jobs:
           mkdir -p site
           cp -r main/* site/
           rm -rf site/.git site/.github
-          mkdir -p site/preview/${{ inputs.branch }}
-          cp -r preview-branch/* site/preview/${{ inputs.branch }}/
-          rm -rf site/preview/${{ inputs.branch }}/.git site/preview/${{ inputs.branch }}/.github
+          mkdir -p site/preview
+          cp -r preview-branch/* site/preview/
+          rm -rf site/preview/.git site/preview/.github
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
