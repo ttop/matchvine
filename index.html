@@ -360,7 +360,8 @@
       overflow: hidden;
     }
 
-    #settings-dialog {
+    #settings-dialog,
+    #new-bracket-dialog {
       max-width: 560px;
     }
 
@@ -400,6 +401,8 @@
 
     .dialog-body {
       padding: 16px 20px 20px;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
     }
 
     /* ── Dialog Overlay ────────────────────────────────────────────────────── */
@@ -705,8 +708,14 @@
       /* inherits .color-grid styles when class is added */
     }
 
-    #settings-bg-color-grid {
-      grid-template-columns: repeat(5, 1fr);
+    #settings-bg-color-grid,
+    #new-bracket-bg-color-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    #settings-bg-color-grid .color-swatch,
+    #new-bracket-bg-color-grid .color-swatch {
+      aspect-ratio: 3 / 1;
     }
 
     /* auto-contrast — always auto-calculated */
@@ -822,6 +831,11 @@
     <div class="dialog-body">
 
       <div class="settings-section">
+        <div class="settings-section-label">Title</div>
+        <input type="text" id="settings-title-input" value="" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;" />
+      </div>
+
+      <div class="settings-section">
         <div class="settings-section-label">Bracket Size</div>
         <div class="size-toggles" id="size-toggles">
           <button class="size-toggle active" data-size="4">4</button>
@@ -842,7 +856,7 @@
 
       <div class="settings-section">
         <div class="settings-section-label">Background Color</div>
-        <div class="color-grid" id="settings-bg-color-grid" style="grid-template-columns: repeat(4, 1fr)">
+        <div class="color-grid" id="settings-bg-color-grid" >
           <!-- color swatches injected by JS -->
         </div>
       </div>
@@ -922,6 +936,47 @@
           <button class="size-toggle" data-size="128">128</button>
         </div>
       </div>
+
+      <div class="settings-section">
+        <div class="settings-section-label">Font</div>
+        <div class="font-picker-grid" id="new-bracket-font-picker-grid">
+          <!-- font options injected by JS -->
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-label">Background Color</div>
+        <div class="color-grid" id="new-bracket-bg-color-grid" >
+          <!-- color swatches injected by JS -->
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-label">Options</div>
+        <div class="settings-toggle-row">
+          <label class="toggle-label" for="new-bracket-toggle-seed-numbers">Show seed numbers</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="new-bracket-toggle-seed-numbers" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-toggle-row" style="margin-top: 8px;">
+          <label class="toggle-label" for="new-bracket-toggle-auto-color">Auto-color new cells</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="new-bracket-toggle-auto-color" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-label">Layout</div>
+        <div class="layout-toggles" id="new-bracket-layout-toggles">
+          <button class="size-toggle active" data-layout="staggered">Compact</button>
+          <button class="size-toggle" data-layout="full">Wide</button>
+        </div>
+      </div>
+
       <button id="new-bracket-create-btn" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px 16px;background:#3b82f6;color:white;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:background 0.1s;">Create Bracket</button>
     </div>
   </div>
