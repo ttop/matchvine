@@ -1711,8 +1711,8 @@
         }
       }, true);
 
-      // Focus after a microtask to ensure DOM is settled
-      Promise.resolve().then(() => {
+      // Focus with a short delay to ensure DOM is settled after render patches
+      setTimeout(() => {
         textEl.focus();
         const range = document.createRange();
         const sel = window.getSelection();
@@ -1720,7 +1720,7 @@
         range.collapse(false);
         sel.removeAllRanges();
         sel.addRange(range);
-      });
+      }, 50);
     }
 
     // ── Patch renderBracket to use .cell-text spans and call autoSizeText ─
