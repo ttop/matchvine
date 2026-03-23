@@ -220,11 +220,6 @@ export function renderBracket(bracket, options) {
       const formatIcon = document.createElement('span');
       formatIcon.className = 'format-icon';
       formatIcon.textContent = '\u{1F3A8}';
-      // On right-half cells, put format icon on the right to avoid overlapping promote button
-      if (!pos.isLeftHalf && !pos.isChampion) {
-        formatIcon.style.left = 'auto';
-        formatIcon.style.right = '4px';
-      }
       cellEl.appendChild(formatIcon);
 
       // Promote button
@@ -242,13 +237,11 @@ export function renderBracket(bracket, options) {
 
             const leftHalf = isLeftHalf(size, pos.round, pos.indexInRound);
             if (leftHalf) {
-              promoteBtn.textContent = '\u203A'; // ›
-              promoteBtn.style.right = '-13px';
-              promoteBtn.style.top = (CELL_HEIGHT / 2 - 13) + 'px';
+              promoteBtn.textContent = '\u25B6'; // ▶
+              promoteBtn.style.right = '-17px';
             } else {
-              promoteBtn.textContent = '\u2039'; // ‹
-              promoteBtn.style.left = '-13px';
-              promoteBtn.style.top = (CELL_HEIGHT / 2 - 13) + 'px';
+              promoteBtn.textContent = '\u25C0'; // ◀
+              promoteBtn.style.left = '-17px';
             }
 
             cellEl.style.overflow = 'visible';
