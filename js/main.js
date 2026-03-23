@@ -40,11 +40,18 @@ function updateHash(push = false) {
   const index = loadBracketIndex();
   const { idToSlug } = buildSlugMap(index);
   const slug = state.bracket ? idToSlug.get(state.bracket.id) : null;
-  const method = push ? 'pushState' : 'replaceState';
   if (slug) {
-    history[method](null, '', '#' + slug);
+    if (push && location.hash && location.hash !== '#') {
+      // Native hash assignment creates a real history entry
+      // that reliably triggers hashchange on back/forward.
+      location.hash = '#' + slug;
+    } else {
+      // replaceState for: initial load, title renames, and the very
+      // first bracket (avoids a stale bare-URL entry in history).
+      history.replaceState(null, '', '#' + slug);
+    }
   } else {
-    history[method](null, '', location.pathname + location.search);
+    history.replaceState(null, '', location.pathname + location.search);
   }
 }
 
@@ -61,7 +68,7 @@ function loadBracketFromHash() {
   doFullRender();
 }
 
-window.addEventListener('popstate', loadBracketFromHash);
+window.addEventListener('hashchange', loadBracketFromHash);
 
 // ── Initialize ───────────────────────────────────────────────────────────
 
