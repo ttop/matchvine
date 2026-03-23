@@ -350,17 +350,19 @@ export function renderBracket(bracket, options) {
   }
 
   // ── 6. Draw SVG connector lines ──
-  const strokeColor = '#9ca3af';
-  const strokeWidth = '1.5';
+  const defaultStrokeColor = '#d1d5db';
+  const defaultStrokeWidth = '1.5';
+  const winnerStrokeColor = '#6b7280';
+  const winnerStrokeWidth = '3';
 
-  function svgLine(x1, y1, x2, y2) {
+  function svgLine(x1, y1, x2, y2, bold) {
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.setAttribute('x1', x1);
     line.setAttribute('y1', y1);
     line.setAttribute('x2', x2);
     line.setAttribute('y2', y2);
-    line.setAttribute('stroke', strokeColor);
-    line.setAttribute('stroke-width', strokeWidth);
+    line.setAttribute('stroke', bold ? winnerStrokeColor : defaultStrokeColor);
+    line.setAttribute('stroke-width', bold ? winnerStrokeWidth : defaultStrokeWidth);
     svg.appendChild(line);
   }
 
@@ -376,52 +378,56 @@ export function renderBracket(bracket, options) {
     const feederB = posMap[feeders[1]];
     if (!feederA || !feederB) continue;
 
+    const slot = bracket.slots[pos.slotIndex];
     const cellWidth = pos.isChampion ? CHAMP_WIDTH : CELL_WIDTH;
     const midY = pos.y + CELL_HEIGHT / 2;
     const feederAMidY = feederA.y + CELL_HEIGHT / 2;
     const feederBMidY = feederB.y + CELL_HEIGHT / 2;
 
+    // Determine which feeder lines should be bold (winner's path)
+    const winnerId = slot && slot.cellId ? slot.cellId : null;
+    const feederASlot = bracket.slots[feeders[0]];
+    const feederBSlot = bracket.slots[feeders[1]];
+    const boldA = winnerId && feederASlot && feederASlot.cellId === winnerId && !loserCellIds.has(winnerId);
+    const boldB = winnerId && feederBSlot && feederBSlot.cellId === winnerId && !loserCellIds.has(winnerId);
+
     if (isStaggered && !pos.isChampion) {
-      // Staggered lines: horizontal from feeder edge to winner midX, then vertical to winner edge
       const winnerMidX = pos.x + CELL_WIDTH / 2;
 
       if (pos.isLeftHalf) {
-        // Top feeder: horizontal right to winnerMidX, then vertical down to winner top
-        svgLine(feederA.x + CELL_WIDTH, feederAMidY, winnerMidX, feederAMidY);
-        svgLine(winnerMidX, feederAMidY, winnerMidX, pos.y);
-        // Bottom feeder: horizontal right to winnerMidX, then vertical up to winner bottom
-        svgLine(feederB.x + CELL_WIDTH, feederBMidY, winnerMidX, feederBMidY);
-        svgLine(winnerMidX, feederBMidY, winnerMidX, pos.y + CELL_HEIGHT);
+        svgLine(feederA.x + CELL_WIDTH, feederAMidY, winnerMidX, feederAMidY, boldA);
+        svgLine(winnerMidX, feederAMidY, winnerMidX, pos.y, boldA);
+        svgLine(feederB.x + CELL_WIDTH, feederBMidY, winnerMidX, feederBMidY, boldB);
+        svgLine(winnerMidX, feederBMidY, winnerMidX, pos.y + CELL_HEIGHT, boldB);
       } else {
-        // Right half: horizontal left to winnerMidX, then vertical
-        svgLine(feederA.x, feederAMidY, winnerMidX, feederAMidY);
-        svgLine(winnerMidX, feederAMidY, winnerMidX, pos.y);
-        svgLine(feederB.x, feederBMidY, winnerMidX, feederBMidY);
-        svgLine(winnerMidX, feederBMidY, winnerMidX, pos.y + CELL_HEIGHT);
+        svgLine(feederA.x, feederAMidY, winnerMidX, feederAMidY, boldA);
+        svgLine(winnerMidX, feederAMidY, winnerMidX, pos.y, boldA);
+        svgLine(feederB.x, feederBMidY, winnerMidX, feederBMidY, boldB);
+        svgLine(winnerMidX, feederBMidY, winnerMidX, pos.y + CELL_HEIGHT, boldB);
       }
 
     } else if (pos.isChampion) {
       const leftFeeder = feederA.isLeftHalf ? feederA : feederB;
       const rightFeeder = feederA.isLeftHalf ? feederB : feederA;
+      const leftFeederSlot = feederA.isLeftHalf ? feederASlot : feederBSlot;
+      const rightFeederSlot = feederA.isLeftHalf ? feederBSlot : feederASlot;
+      const boldLeft = winnerId && leftFeederSlot && leftFeederSlot.cellId === winnerId && !loserCellIds.has(winnerId);
+      const boldRight = winnerId && rightFeederSlot && rightFeederSlot.cellId === winnerId && !loserCellIds.has(winnerId);
       const champMidX = pos.x + CHAMP_WIDTH / 2;
 
       if (isStaggered) {
-        // Staggered: lines from semis go horizontal then vertical to champion's top/bottom at its horizontal midpoint
         const leftMidY = leftFeeder.y + CELL_HEIGHT / 2;
         const rightMidY = rightFeeder.y + CELL_HEIGHT / 2;
-        // Left semi → champion top edge at midpoint
-        svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, champMidX, leftMidY);
-        svgLine(champMidX, leftMidY, champMidX, pos.y);
-        // Right semi → champion bottom edge at midpoint
-        svgLine(rightFeeder.x, rightMidY, champMidX, rightMidY);
-        svgLine(champMidX, rightMidY, champMidX, pos.y + CELL_HEIGHT);
+        svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, champMidX, leftMidY, boldLeft);
+        svgLine(champMidX, leftMidY, champMidX, pos.y, boldLeft);
+        svgLine(rightFeeder.x, rightMidY, champMidX, rightMidY, boldRight);
+        svgLine(champMidX, rightMidY, champMidX, pos.y + CELL_HEIGHT, boldRight);
       } else {
-        // Classic: horizontal bracket lines to champion left/right edges
         const ljx = leftFeeder.x + CELL_WIDTH + (pos.x - (leftFeeder.x + CELL_WIDTH)) / 2;
         const leftMidY = leftFeeder.y + CELL_HEIGHT / 2;
-        svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, ljx, leftMidY);
-        svgLine(ljx, leftMidY, ljx, midY);
-        svgLine(ljx, midY, pos.x, midY);
+        svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, ljx, leftMidY, boldLeft);
+        svgLine(ljx, leftMidY, ljx, midY, boldLeft);
+        svgLine(ljx, midY, pos.x, midY, boldLeft);
 
         const rjx = rightFeeder.x - (rightFeeder.x - (pos.x + CHAMP_WIDTH)) / 2;
         const rightMidY = rightFeeder.y + CELL_HEIGHT / 2;
@@ -432,17 +438,19 @@ export function renderBracket(bracket, options) {
 
     } else if (pos.isLeftHalf) {
       const jx = feederA.x + CELL_WIDTH + (pos.x - (feederA.x + CELL_WIDTH)) / 2;
-      svgLine(feederA.x + CELL_WIDTH, feederAMidY, jx, feederAMidY);
-      svgLine(feederB.x + CELL_WIDTH, feederBMidY, jx, feederBMidY);
-      svgLine(jx, feederAMidY, jx, feederBMidY);
-      svgLine(jx, midY, pos.x, midY);
+      const boldAny = boldA || boldB;
+      svgLine(feederA.x + CELL_WIDTH, feederAMidY, jx, feederAMidY, boldA);
+      svgLine(feederB.x + CELL_WIDTH, feederBMidY, jx, feederBMidY, boldB);
+      svgLine(jx, feederAMidY, jx, feederBMidY, boldAny);
+      svgLine(jx, midY, pos.x, midY, boldAny);
 
     } else {
       const jx = feederA.x - (feederA.x - (pos.x + CELL_WIDTH)) / 2;
-      svgLine(feederA.x, feederAMidY, jx, feederAMidY);
-      svgLine(feederB.x, feederBMidY, jx, feederBMidY);
-      svgLine(jx, feederAMidY, jx, feederBMidY);
-      svgLine(jx, midY, pos.x + CELL_WIDTH, midY);
+      const boldAny = boldA || boldB;
+      svgLine(feederA.x, feederAMidY, jx, feederAMidY, boldA);
+      svgLine(feederB.x, feederBMidY, jx, feederBMidY, boldB);
+      svgLine(jx, feederAMidY, jx, feederBMidY, boldAny);
+      svgLine(jx, midY, pos.x + CELL_WIDTH, midY, boldAny);
     }
   }
 
