@@ -238,10 +238,10 @@ export function renderBracket(bracket, options) {
             const leftHalf = isLeftHalf(size, pos.round, pos.indexInRound);
             if (leftHalf) {
               promoteBtn.textContent = '\u25B6'; // ▶
-              promoteBtn.style.right = '-17px';
+              promoteBtn.style.right = '-28px';
             } else {
               promoteBtn.textContent = '\u25C0'; // ◀
-              promoteBtn.style.left = '-17px';
+              promoteBtn.style.left = '-28px';
             }
 
             cellEl.style.overflow = 'visible';
