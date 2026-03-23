@@ -827,11 +827,32 @@ export function setupDialogEvents(storageFns) {
     if (dragSourceSlotIndex === null) return;
     const cellEl = e.target.closest('.cell');
     if (!cellEl) return;
-    const round = parseInt(cellEl.getAttribute('data-round'), 10);
-    if (round !== 0) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    cellEl.classList.add('drag-over');
+    const targetRound = parseInt(cellEl.getAttribute('data-round'), 10);
+    const sourceRound = parseInt(
+      document.querySelector(`.cell[data-slot-index="${dragSourceSlotIndex}"]`)?.getAttribute('data-round') || '0', 10
+    );
+
+    // Allow drop on: round-0 cells (swap), or the specific next-round slot (promote)
+    if (targetRound === 0 && sourceRound === 0) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      cellEl.classList.add('drag-over');
+    } else if (targetRound === sourceRound + 1) {
+      // Check this is the correct next slot for this source
+      const sourceIdx = parseInt(
+        document.querySelector(`.cell[data-slot-index="${dragSourceSlotIndex}"]`)?.getAttribute('data-index-in-round') || '0', 10
+      );
+      const next = getNextSlot(state.bracket.size, sourceRound, sourceIdx);
+      if (next) {
+        const nextSlotIdx = getSlotIndex(state.bracket.size, next.round, next.index);
+        const targetSlotIdx = parseInt(cellEl.getAttribute('data-slot-index'), 10);
+        if (nextSlotIdx === targetSlotIdx) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          cellEl.classList.add('drag-over');
+        }
+      }
+    }
   });
 
   document.getElementById('bracket-container').addEventListener('dragleave', function(e) {
@@ -848,26 +869,34 @@ export function setupDialogEvents(storageFns) {
 
     const targetSlotIndex = parseInt(cellEl.getAttribute('data-slot-index'), 10);
     const targetRound = parseInt(cellEl.getAttribute('data-round'), 10);
-    if (targetRound !== 0) return;
     if (targetSlotIndex === dragSourceSlotIndex) return;
 
     const bracket = state.bracket;
     const sourceSlot = bracket.slots[dragSourceSlotIndex];
     const targetSlot = bracket.slots[targetSlotIndex];
-
     if (!sourceSlot) return;
 
-    const sourceCellId = sourceSlot.cellId;
-    const targetCellId = targetSlot.cellId;
+    const sourceRound = parseInt(
+      document.querySelector(`.cell[data-slot-index="${dragSourceSlotIndex}"]`)?.getAttribute('data-round') || '0', 10
+    );
 
-    sourceSlot.cellId = targetCellId;
-    targetSlot.cellId = sourceCellId;
-
-    if (sourceCellId && bracket.cells[sourceCellId]) {
-      bracket.cells[sourceCellId].sourceSlot = targetSlotIndex;
-    }
-    if (targetCellId && bracket.cells[targetCellId]) {
-      bracket.cells[targetCellId].sourceSlot = dragSourceSlotIndex;
+    if (targetRound === 0 && sourceRound === 0) {
+      // Round-0 swap
+      const sourceCellId = sourceSlot.cellId;
+      const targetCellId = targetSlot.cellId;
+      sourceSlot.cellId = targetCellId;
+      targetSlot.cellId = sourceCellId;
+      if (sourceCellId && bracket.cells[sourceCellId]) {
+        bracket.cells[sourceCellId].sourceSlot = targetSlotIndex;
+      }
+      if (targetCellId && bracket.cells[targetCellId]) {
+        bracket.cells[targetCellId].sourceSlot = dragSourceSlotIndex;
+      }
+    } else if (targetRound === sourceRound + 1 && sourceSlot.cellId) {
+      // Promote: drag cell to next round
+      targetSlot.cellId = sourceSlot.cellId;
+    } else {
+      return; // invalid drop
     }
 
     dragSourceSlotIndex = null;

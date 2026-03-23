@@ -263,12 +263,24 @@ export function renderBracket(bracket, options) {
         cellEl.appendChild(demoteBtn);
       }
 
-      // Draggable for first-round filled cells whose matchup hasn't advanced yet
-      if (pos.round === 0) {
-        const next = getNextSlot(size, 0, pos.indexInRound);
-        const nextSlotIdx = next ? getSlotIndex(size, next.round, next.index) : -1;
-        const nextSlot = nextSlotIdx >= 0 ? bracket.slots[nextSlotIdx] : null;
+      // Draggable for filled cells whose next-round slot is empty
+      // Round 0: can drag to swap with other round-0 cells OR drag to promote
+      // Round 1+: can only drag to promote (to next round)
+      const next = getNextSlot(size, pos.round, pos.indexInRound);
+      if (next) {
+        const nextSlotIdx = getSlotIndex(size, next.round, next.index);
+        const nextSlot = bracket.slots[nextSlotIdx];
         if (!nextSlot || !nextSlot.cellId) {
+          cellEl.setAttribute('draggable', 'true');
+          cellEl.setAttribute('data-can-promote', 'true');
+        }
+      }
+      // Round 0 cells without promotion can still drag to swap
+      if (pos.round === 0 && !cellEl.hasAttribute('draggable')) {
+        const next2 = getNextSlot(size, 0, pos.indexInRound);
+        const nextSlotIdx2 = next2 ? getSlotIndex(size, next2.round, next2.index) : -1;
+        const nextSlot2 = nextSlotIdx2 >= 0 ? bracket.slots[nextSlotIdx2] : null;
+        if (!nextSlot2 || !nextSlot2.cellId) {
           cellEl.setAttribute('draggable', 'true');
         }
       }
