@@ -243,10 +243,19 @@ export function renderBracket(bracket, options) {
       }
       cellEl.appendChild(textSpan);
 
-      // Format icon
+      // Format icon — tiny 3×2 color swatch grid
       const formatIcon = document.createElement('span');
       formatIcon.className = 'format-icon';
-      formatIcon.textContent = '\u{1F3A8}';
+      const grid = document.createElement('span');
+      grid.className = 'format-icon-grid';
+      const swatchColors = ['#ef4444', '#eab308', '#3b82f6', '#22c55e', '#8b5cf6', '#ec4899'];
+      for (const c of swatchColors) {
+        const s = document.createElement('span');
+        s.className = 'format-icon-swatch';
+        s.style.backgroundColor = c;
+        grid.appendChild(s);
+      }
+      formatIcon.appendChild(grid);
       cellEl.appendChild(formatIcon);
 
       // Promote button
