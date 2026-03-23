@@ -208,26 +208,30 @@
     }
 
     .promote-btn:hover {
-      background: #16a34a;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      background: #22c55e;
     }
 
     /* ── Demote Button ─────────────────────────────────────────────────────── */
     .demote-btn {
-      width: 20px;
-      height: 20px;
+      width: 26px;
+      height: 38px;
       background: #ef4444;
-      border-radius: 50%;
+      border-radius: 8px 0 0 8px;
       position: absolute;
-      top: -8px;
-      right: -8px;
+      top: 50%;
+      transform: translateY(-50%);
       display: none;
       color: white;
-      font-size: 10px;
+      font-size: 24px;
       font-weight: bold;
       cursor: pointer;
       align-items: center;
       justify-content: center;
+      padding-bottom: 3px;
+    }
+
+    .demote-btn.demote-right {
+      border-radius: 0 8px 8px 0;
     }
 
     .cell:hover .demote-btn {

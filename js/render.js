@@ -267,7 +267,16 @@ export function renderBracket(bracket, options) {
           demoteBtn.className = 'demote-btn';
           demoteBtn.setAttribute('data-action', 'demote');
           demoteBtn.setAttribute('data-slot-index', pos.slotIndex);
-          demoteBtn.textContent = '\u00D7'; // ×
+          const leftHalfDemote = isLeftHalf(size, pos.round, pos.indexInRound);
+          // Demote goes on the opposite side from promote (pointing back)
+          if (leftHalfDemote) {
+            demoteBtn.textContent = '\u00AB'; // « (points left = back)
+            demoteBtn.style.left = '-26px';
+          } else {
+            demoteBtn.textContent = '\u00BB'; // » (points right = back)
+            demoteBtn.style.right = '-26px';
+            demoteBtn.classList.add('demote-right');
+          }
           cellEl.style.overflow = 'visible';
           cellEl.appendChild(demoteBtn);
         }
