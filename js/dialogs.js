@@ -166,6 +166,9 @@ export function hideFormatPopover() {
 export function openSettingsDialog() {
   const bracket = state.bracket;
 
+  // Title
+  document.getElementById('settings-title-input').value = bracket.title || '';
+
   // Highlight current size
   document.querySelectorAll('#size-toggles .size-toggle').forEach(btn => {
     btn.classList.toggle('active', parseInt(btn.getAttribute('data-size'), 10) === bracket.size);
@@ -373,21 +376,107 @@ function switchToBracket(id) {
 // ── New Bracket Dialog ───────────────────────────────────────────────────
 
 let newBracketSelectedSize = 16;
+let newBracketSelectedFont = 'sans-serif';
+let newBracketSelectedBgColor = '#ffffff';
+let newBracketSelectedLayout = 'staggered';
 
 export function openNewBracketDialog() {
   newBracketSelectedSize = 16;
+  newBracketSelectedFont = 'sans-serif';
+  newBracketSelectedBgColor = '#ffffff';
+  newBracketSelectedLayout = 'staggered';
+
   document.getElementById('new-bracket-title-input').value = 'New Bracket';
   document.querySelectorAll('#new-bracket-size-toggles .size-toggle').forEach(btn => {
     btn.classList.toggle('active', parseInt(btn.getAttribute('data-size'), 10) === 16);
   });
+
+  // Font picker
+  populateNewBracketFontPicker();
+
+  // Background color grid
+  const bgGrid = document.getElementById('new-bracket-bg-color-grid');
+  bgGrid.innerHTML = '';
+  BACKGROUND_COLORS.forEach(color => {
+    const swatch = document.createElement('div');
+    swatch.className = 'color-swatch';
+    swatch.style.backgroundColor = color;
+    swatch.setAttribute('data-color', color);
+    if (color === '#ffffff') swatch.classList.add('selected');
+    bgGrid.appendChild(swatch);
+  });
+
+  // Option toggles
+  document.getElementById('new-bracket-toggle-seed-numbers').checked = true;
+  document.getElementById('new-bracket-toggle-auto-color').checked = true;
+
+  // Layout toggles
+  document.querySelectorAll('#new-bracket-layout-toggles .size-toggle').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-layout') === 'staggered');
+  });
+
   showDialog('new-bracket-dialog');
   document.getElementById('new-bracket-title-input').focus();
   document.getElementById('new-bracket-title-input').select();
 }
 
+function populateNewBracketFontPicker() {
+  const grid = document.getElementById('new-bracket-font-picker-grid');
+  grid.innerHTML = '';
+
+  // System fonts
+  DEFAULT_FONTS.forEach(font => {
+    const card = document.createElement('div');
+    card.className = 'font-option';
+    card.setAttribute('data-font-family', font.family);
+    card.setAttribute('data-font-type', 'system');
+    card.style.fontFamily = font.family;
+    if (newBracketSelectedFont === font.family) card.classList.add('selected');
+    card.innerHTML = `<div style="font-size:20px;font-weight:500">${escapeHtml(font.name)}</div>`;
+    grid.appendChild(card);
+  });
+
+  // Google fonts
+  GOOGLE_FONTS.forEach(fontName => {
+    const card = document.createElement('div');
+    card.className = 'font-option';
+    card.setAttribute('data-font-family', fontName);
+    card.setAttribute('data-font-type', 'google');
+    if (newBracketSelectedFont === fontName) card.classList.add('selected');
+    card.innerHTML = `<div class="font-preview" style="font-size:20px;font-weight:500">${escapeHtml(fontName)}</div>`;
+    grid.appendChild(card);
+  });
+
+  // Lazy-load Google Font previews
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const card = entry.target;
+        const fontName = card.getAttribute('data-font-family');
+        const fontType = card.getAttribute('data-font-type');
+        if (fontType === 'google') {
+          loadGoogleFont(fontName).then(() => {
+            card.style.fontFamily = `"${fontName}", sans-serif`;
+          });
+        }
+        observer.unobserve(card);
+      }
+    });
+  }, { root: grid.closest('.dialog-body'), threshold: 0.1 });
+
+  grid.querySelectorAll('.font-option[data-font-type="google"]').forEach(card => {
+    observer.observe(card);
+  });
+}
+
 function createNewBracketFromDialog() {
   const title = document.getElementById('new-bracket-title-input').value.trim() || 'New Bracket';
   const newBr = createBracket(newBracketSelectedSize, title);
+  newBr.titleFont = newBracketSelectedFont;
+  newBr.backgroundColor = newBracketSelectedBgColor;
+  newBr.showSeedNumbers = document.getElementById('new-bracket-toggle-seed-numbers').checked;
+  newBr.autoColor = document.getElementById('new-bracket-toggle-auto-color').checked;
+  newBr.layoutMode = newBracketSelectedLayout;
   state.bracket = newBr;
   _saveBracket(newBr);
   _fullRenderCurrentBracket();
@@ -444,6 +533,16 @@ export function setupDialogEvents(storageFns) {
 
   document.getElementById('settings-dialog-close').addEventListener('click', function() {
     hideDialog('settings-dialog');
+  });
+
+  // ── Settings title ──
+  document.getElementById('settings-title-input').addEventListener('input', function() {
+    const newTitle = this.value.trim();
+    if (newTitle) {
+      state.bracket.title = newTitle;
+      state.bracket.updatedAt = new Date().toISOString();
+      renderBracket(state.bracket);
+    }
   });
 
   // ── Dialog overlay ──
@@ -796,6 +895,46 @@ export function setupDialogEvents(storageFns) {
     newBracketSelectedSize = parseInt(btn.getAttribute('data-size'), 10);
     this.querySelectorAll('.size-toggle').forEach(b => {
       b.classList.toggle('active', parseInt(b.getAttribute('data-size'), 10) === newBracketSelectedSize);
+    });
+  });
+
+  // ── New bracket font picker ──
+  document.getElementById('new-bracket-font-picker-grid').addEventListener('click', function(e) {
+    const card = e.target.closest('.font-option');
+    if (!card) return;
+
+    const fontFamily = card.getAttribute('data-font-family');
+    const fontType = card.getAttribute('data-font-type');
+
+    const apply = () => {
+      newBracketSelectedFont = fontFamily;
+      this.querySelectorAll('.font-option').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+    };
+
+    if (fontType === 'google') {
+      loadGoogleFont(fontFamily).then(apply);
+    } else {
+      apply();
+    }
+  });
+
+  // ── New bracket background color ──
+  document.getElementById('new-bracket-bg-color-grid').addEventListener('click', function(e) {
+    const swatch = e.target.closest('.color-swatch');
+    if (!swatch) return;
+    newBracketSelectedBgColor = swatch.getAttribute('data-color');
+    this.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+    swatch.classList.add('selected');
+  });
+
+  // ── New bracket layout toggle ──
+  document.getElementById('new-bracket-layout-toggles').addEventListener('click', function(e) {
+    const btn = e.target.closest('.size-toggle');
+    if (!btn) return;
+    newBracketSelectedLayout = btn.getAttribute('data-layout');
+    this.querySelectorAll('.size-toggle').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-layout') === newBracketSelectedLayout);
     });
   });
 
