@@ -295,7 +295,7 @@
     .bracket-title-display {
       position: absolute;
       text-align: center;
-      font-size: 36px;
+      font-size: 42px;
       font-weight: 700;
       color: #1f2937;
       cursor: pointer;
@@ -949,8 +949,8 @@
     const CHAMP_WIDTH = 220;
     const TOP_PADDING = 20;
     const LABEL_MARGIN = 40;
-    const LEFT_PADDING = 30; // enough room for seed numbers on the left
-    const RIGHT_PADDING = 35; // enough room for seed numbers on the right
+    const LEFT_PADDING = 50; // enough room for seed numbers on the left
+    const RIGHT_PADDING = 50; // enough room for seed numbers on the right
 
     // ── State ────────────────────────────────────────────────────────────────
 
@@ -1517,11 +1517,13 @@
         const titleEl = document.createElement('div');
         titleEl.className = 'bracket-title-display';
         titleEl.textContent = bracket.title;
-        // Center above the champion area
+        // Center above the champion area, halfway between top and champion
         const titleWidth = 400;
+        const champSlotPos = posMap[getChampionSlotIndex(size)];
+        const championY = champSlotPos ? champSlotPos.y : 0;
         titleEl.style.left = (championX + CHAMP_WIDTH / 2 - titleWidth / 2) + 'px';
         titleEl.style.width = titleWidth + 'px';
-        titleEl.style.top = '0px';
+        titleEl.style.top = (championY / 2 - 25) + 'px';
         titleEl.addEventListener('click', function() {
           // Click title to edit it
           const titleInput = document.getElementById('bracket-title');
@@ -1704,10 +1706,10 @@
         textEl.spellcheck = false;
         textEl.setAttribute('spellcheck', 'false');
 
-        // Add keydown handler directly on the contenteditable element
-        // Use onkeydown to ensure only one handler (overwrite, not accumulate)
-        textEl.onkeydown = function(e) {
-          console.log('[Matchvine] textEl keydown:', e.key, 'shiftKey:', e.shiftKey);
+        // Add keydown handler directly on the contenteditable element using CAPTURE phase
+        // This ensures we intercept Enter before the contenteditable inserts a <br>/<div>
+        textEl.addEventListener('keydown', function(e) {
+          console.log('[Matchvine] textEl keydown (capture):', e.key, 'shiftKey:', e.shiftKey);
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             e.stopPropagation();
@@ -1715,7 +1717,7 @@
             confirmEdit();
             return false;
           }
-        };
+        }, true);
 
         textEl.focus();
 
@@ -1800,15 +1802,12 @@
       }
     });
 
-    // ── Event: keydown for editing ────────────────────────────────────────
+    // ── Event: keydown for editing (Escape only — Enter is handled on textEl in capture phase) ─
 
     document.addEventListener('keydown', function(e) {
       if (state.editingSlotIndex === null) return;
 
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        confirmEdit();
-      } else if (e.key === 'Escape') {
+      if (e.key === 'Escape') {
         // Revert to before-edit text; if cell was just created from empty slot, remove it
         const bracket = state.bracket;
         const slot = bracket.slots[state.editingSlotIndex];
