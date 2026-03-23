@@ -345,20 +345,32 @@ export function renderBracket(bracket, options) {
     } else if (pos.isChampion) {
       const leftFeeder = feederA.isLeftHalf ? feederA : feederB;
       const rightFeeder = feederA.isLeftHalf ? feederB : feederA;
+      const champMidX = pos.x + CHAMP_WIDTH / 2;
 
-      // Left feeder -> champion
-      const ljx = leftFeeder.x + CELL_WIDTH + (pos.x - (leftFeeder.x + CELL_WIDTH)) / 2;
-      const leftMidY = leftFeeder.y + CELL_HEIGHT / 2;
-      svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, ljx, leftMidY);
-      svgLine(ljx, leftMidY, ljx, midY);
-      svgLine(ljx, midY, pos.x, midY);
+      if (isStaggered) {
+        // Staggered: lines from semis go horizontal then vertical to champion's top/bottom at its horizontal midpoint
+        const leftMidY = leftFeeder.y + CELL_HEIGHT / 2;
+        const rightMidY = rightFeeder.y + CELL_HEIGHT / 2;
+        // Left semi → champion top edge at midpoint
+        svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, champMidX, leftMidY);
+        svgLine(champMidX, leftMidY, champMidX, pos.y);
+        // Right semi → champion bottom edge at midpoint
+        svgLine(rightFeeder.x, rightMidY, champMidX, rightMidY);
+        svgLine(champMidX, rightMidY, champMidX, pos.y + CELL_HEIGHT);
+      } else {
+        // Classic: horizontal bracket lines to champion left/right edges
+        const ljx = leftFeeder.x + CELL_WIDTH + (pos.x - (leftFeeder.x + CELL_WIDTH)) / 2;
+        const leftMidY = leftFeeder.y + CELL_HEIGHT / 2;
+        svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, ljx, leftMidY);
+        svgLine(ljx, leftMidY, ljx, midY);
+        svgLine(ljx, midY, pos.x, midY);
 
-      // Right feeder -> champion
-      const rjx = rightFeeder.x - (rightFeeder.x - (pos.x + CHAMP_WIDTH)) / 2;
-      const rightMidY = rightFeeder.y + CELL_HEIGHT / 2;
-      svgLine(rightFeeder.x, rightMidY, rjx, rightMidY);
-      svgLine(rjx, rightMidY, rjx, midY);
-      svgLine(rjx, midY, pos.x + CHAMP_WIDTH, midY);
+        const rjx = rightFeeder.x - (rightFeeder.x - (pos.x + CHAMP_WIDTH)) / 2;
+        const rightMidY = rightFeeder.y + CELL_HEIGHT / 2;
+        svgLine(rightFeeder.x, rightMidY, rjx, rightMidY);
+        svgLine(rjx, rightMidY, rjx, midY);
+        svgLine(rjx, midY, pos.x + CHAMP_WIDTH, midY);
+      }
 
     } else if (pos.isLeftHalf) {
       const jx = feederA.x + CELL_WIDTH + (pos.x - (feederA.x + CELL_WIDTH)) / 2;
