@@ -41,12 +41,16 @@ export function autoSizeText(cellDiv) {
     return;
   }
 
-  const maxW = cellDiv.clientWidth - 16;  // padding
-  const maxH = cellDiv.clientHeight - 8;
+  // Use CELL_WIDTH constant for consistency (clientWidth varies with border thickness)
+  const isChamp = cellDiv.classList.contains('cell-champion');
+  const baseWidth = isChamp ? CHAMP_WIDTH : CELL_WIDTH;
+  const maxW = baseWidth - 20;  // padding
+  const maxH = CELL_HEIGHT - 10;
 
-  // Create a hidden measurement span
+  // Create a hidden measurement span that inherits the cell's font
   const measure = document.createElement('span');
-  measure.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;';
+  const computedFont = getComputedStyle(cellDiv).fontFamily;
+  measure.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-family:' + computedFont + ';';
   measure.textContent = textEl.textContent;
   document.body.appendChild(measure);
 
@@ -154,6 +158,28 @@ export function renderBracket(bracket, options) {
     }
   }
 
+  // Collect loser cellIds — cells that lost a matchup (opponent was promoted instead)
+  const loserCellIds = new Set();
+  for (let round = 1; round < totalRounds; round++) {
+    const slotsInRound = getSlotsInRound(size, round);
+    for (let idx = 0; idx < slotsInRound; idx++) {
+      const slotIndex = getSlotIndex(size, round, idx);
+      const slot = bracket.slots[slotIndex];
+      if (slot && slot.cellId) {
+        // This slot has a winner — find the feeders and mark the loser
+        const feeders = getMatchupPair(size, round, idx);
+        if (feeders) {
+          for (const feederIdx of feeders) {
+            const feederSlot = bracket.slots[feederIdx];
+            if (feederSlot && feederSlot.cellId && feederSlot.cellId !== slot.cellId) {
+              loserCellIds.add(feederSlot.cellId);
+            }
+          }
+        }
+      }
+    }
+  }
+
   const tournamentStarted = hasTournamentStarted(bracket);
 
   // ── 5. Render cells ──
@@ -191,15 +217,16 @@ export function renderBracket(bracket, options) {
       cellEl.style.color = cell.textColor || '#1a1a1a';
 
       // Winner/loser styling
-      if (pos.round < totalRounds - 1 && promotedCellIds.has(slot.cellId)) {
+      // Check if this cell lost — its cellId appears in a matchup where a different cell was promoted
+      if (loserCellIds.has(slot.cellId)) {
+        cellEl.classList.add('cell-loser');
+      } else if (pos.round < totalRounds - 1 && promotedCellIds.has(slot.cellId)) {
         const next = getNextSlot(size, pos.round, pos.indexInRound);
         if (next) {
           const nextSlotIndex = getSlotIndex(size, next.round, next.index);
           const nextSlot = bracket.slots[nextSlotIndex];
           if (nextSlot && nextSlot.cellId === slot.cellId) {
             cellEl.classList.add('cell-winner');
-          } else if (nextSlot && nextSlot.cellId && nextSlot.cellId !== slot.cellId) {
-            cellEl.classList.add('cell-loser');
           }
         }
       }
@@ -237,16 +264,15 @@ export function renderBracket(bracket, options) {
 
             const leftHalf = isLeftHalf(size, pos.round, pos.indexInRound);
             if (leftHalf) {
-              promoteBtn.textContent = '\u203A'; // ›
-              promoteBtn.style.right = '-13px';
-              promoteBtn.style.top = (CELL_HEIGHT / 2 - 13) + 'px';
+              promoteBtn.textContent = '\u00BB'; // »
+              promoteBtn.style.right = '-26px';
             } else {
-              promoteBtn.textContent = '\u2039'; // ‹
-              promoteBtn.style.left = '-13px';
-              promoteBtn.style.top = (CELL_HEIGHT / 2 - 13) + 'px';
+              promoteBtn.textContent = '\u00AB'; // «
+              promoteBtn.style.left = '-26px';
+              promoteBtn.classList.add('promote-left');
             }
 
-            cellEl.style.overflow = 'visible';
+
             cellEl.appendChild(promoteBtn);
           }
         }
@@ -268,7 +294,16 @@ export function renderBracket(bracket, options) {
           demoteBtn.className = 'demote-btn';
           demoteBtn.setAttribute('data-action', 'demote');
           demoteBtn.setAttribute('data-slot-index', pos.slotIndex);
-          demoteBtn.textContent = '\u00D7'; // ×
+          const leftHalfDemote = isLeftHalf(size, pos.round, pos.indexInRound);
+          // Demote goes on the opposite side from promote (pointing back)
+          if (leftHalfDemote) {
+            demoteBtn.textContent = '\u00AB'; // « (points left = back)
+            demoteBtn.style.left = '-26px';
+          } else {
+            demoteBtn.textContent = '\u00BB'; // » (points right = back)
+            demoteBtn.style.right = '-26px';
+            demoteBtn.classList.add('demote-right');
+          }
           cellEl.style.overflow = 'visible';
           cellEl.appendChild(demoteBtn);
         }
@@ -315,17 +350,19 @@ export function renderBracket(bracket, options) {
   }
 
   // ── 6. Draw SVG connector lines ──
-  const strokeColor = '#9ca3af';
-  const strokeWidth = '1.5';
+  const defaultStrokeColor = '#d1d5db';
+  const defaultStrokeWidth = '1.5';
+  const winnerStrokeColor = '#6b7280';
+  const winnerStrokeWidth = '2.5';
 
-  function svgLine(x1, y1, x2, y2) {
+  function svgLine(x1, y1, x2, y2, bold) {
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.setAttribute('x1', x1);
     line.setAttribute('y1', y1);
     line.setAttribute('x2', x2);
     line.setAttribute('y2', y2);
-    line.setAttribute('stroke', strokeColor);
-    line.setAttribute('stroke-width', strokeWidth);
+    line.setAttribute('stroke', bold ? winnerStrokeColor : defaultStrokeColor);
+    line.setAttribute('stroke-width', bold ? winnerStrokeWidth : defaultStrokeWidth);
     svg.appendChild(line);
   }
 
@@ -341,52 +378,56 @@ export function renderBracket(bracket, options) {
     const feederB = posMap[feeders[1]];
     if (!feederA || !feederB) continue;
 
+    const slot = bracket.slots[pos.slotIndex];
     const cellWidth = pos.isChampion ? CHAMP_WIDTH : CELL_WIDTH;
     const midY = pos.y + CELL_HEIGHT / 2;
     const feederAMidY = feederA.y + CELL_HEIGHT / 2;
     const feederBMidY = feederB.y + CELL_HEIGHT / 2;
 
+    // Determine which feeder lines should be bold (winner's path)
+    const winnerId = slot && slot.cellId ? slot.cellId : null;
+    const feederASlot = bracket.slots[feeders[0]];
+    const feederBSlot = bracket.slots[feeders[1]];
+    const boldA = winnerId && feederASlot && feederASlot.cellId === winnerId && !loserCellIds.has(winnerId);
+    const boldB = winnerId && feederBSlot && feederBSlot.cellId === winnerId && !loserCellIds.has(winnerId);
+
     if (isStaggered && !pos.isChampion) {
-      // Staggered lines: horizontal from feeder edge to winner midX, then vertical to winner edge
       const winnerMidX = pos.x + CELL_WIDTH / 2;
 
       if (pos.isLeftHalf) {
-        // Top feeder: horizontal right to winnerMidX, then vertical down to winner top
-        svgLine(feederA.x + CELL_WIDTH, feederAMidY, winnerMidX, feederAMidY);
-        svgLine(winnerMidX, feederAMidY, winnerMidX, pos.y);
-        // Bottom feeder: horizontal right to winnerMidX, then vertical up to winner bottom
-        svgLine(feederB.x + CELL_WIDTH, feederBMidY, winnerMidX, feederBMidY);
-        svgLine(winnerMidX, feederBMidY, winnerMidX, pos.y + CELL_HEIGHT);
+        svgLine(feederA.x + CELL_WIDTH, feederAMidY, winnerMidX, feederAMidY, boldA);
+        svgLine(winnerMidX, feederAMidY, winnerMidX, pos.y, boldA);
+        svgLine(feederB.x + CELL_WIDTH, feederBMidY, winnerMidX, feederBMidY, boldB);
+        svgLine(winnerMidX, feederBMidY, winnerMidX, pos.y + CELL_HEIGHT, boldB);
       } else {
-        // Right half: horizontal left to winnerMidX, then vertical
-        svgLine(feederA.x, feederAMidY, winnerMidX, feederAMidY);
-        svgLine(winnerMidX, feederAMidY, winnerMidX, pos.y);
-        svgLine(feederB.x, feederBMidY, winnerMidX, feederBMidY);
-        svgLine(winnerMidX, feederBMidY, winnerMidX, pos.y + CELL_HEIGHT);
+        svgLine(feederA.x, feederAMidY, winnerMidX, feederAMidY, boldA);
+        svgLine(winnerMidX, feederAMidY, winnerMidX, pos.y, boldA);
+        svgLine(feederB.x, feederBMidY, winnerMidX, feederBMidY, boldB);
+        svgLine(winnerMidX, feederBMidY, winnerMidX, pos.y + CELL_HEIGHT, boldB);
       }
 
     } else if (pos.isChampion) {
       const leftFeeder = feederA.isLeftHalf ? feederA : feederB;
       const rightFeeder = feederA.isLeftHalf ? feederB : feederA;
+      const leftFeederSlot = feederA.isLeftHalf ? feederASlot : feederBSlot;
+      const rightFeederSlot = feederA.isLeftHalf ? feederBSlot : feederASlot;
+      const boldLeft = winnerId && leftFeederSlot && leftFeederSlot.cellId === winnerId && !loserCellIds.has(winnerId);
+      const boldRight = winnerId && rightFeederSlot && rightFeederSlot.cellId === winnerId && !loserCellIds.has(winnerId);
       const champMidX = pos.x + CHAMP_WIDTH / 2;
 
       if (isStaggered) {
-        // Staggered: lines from semis go horizontal then vertical to champion's top/bottom at its horizontal midpoint
         const leftMidY = leftFeeder.y + CELL_HEIGHT / 2;
         const rightMidY = rightFeeder.y + CELL_HEIGHT / 2;
-        // Left semi → champion top edge at midpoint
-        svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, champMidX, leftMidY);
-        svgLine(champMidX, leftMidY, champMidX, pos.y);
-        // Right semi → champion bottom edge at midpoint
-        svgLine(rightFeeder.x, rightMidY, champMidX, rightMidY);
-        svgLine(champMidX, rightMidY, champMidX, pos.y + CELL_HEIGHT);
+        svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, champMidX, leftMidY, boldLeft);
+        svgLine(champMidX, leftMidY, champMidX, pos.y, boldLeft);
+        svgLine(rightFeeder.x, rightMidY, champMidX, rightMidY, boldRight);
+        svgLine(champMidX, rightMidY, champMidX, pos.y + CELL_HEIGHT, boldRight);
       } else {
-        // Classic: horizontal bracket lines to champion left/right edges
         const ljx = leftFeeder.x + CELL_WIDTH + (pos.x - (leftFeeder.x + CELL_WIDTH)) / 2;
         const leftMidY = leftFeeder.y + CELL_HEIGHT / 2;
-        svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, ljx, leftMidY);
-        svgLine(ljx, leftMidY, ljx, midY);
-        svgLine(ljx, midY, pos.x, midY);
+        svgLine(leftFeeder.x + CELL_WIDTH, leftMidY, ljx, leftMidY, boldLeft);
+        svgLine(ljx, leftMidY, ljx, midY, boldLeft);
+        svgLine(ljx, midY, pos.x, midY, boldLeft);
 
         const rjx = rightFeeder.x - (rightFeeder.x - (pos.x + CHAMP_WIDTH)) / 2;
         const rightMidY = rightFeeder.y + CELL_HEIGHT / 2;
@@ -397,17 +438,19 @@ export function renderBracket(bracket, options) {
 
     } else if (pos.isLeftHalf) {
       const jx = feederA.x + CELL_WIDTH + (pos.x - (feederA.x + CELL_WIDTH)) / 2;
-      svgLine(feederA.x + CELL_WIDTH, feederAMidY, jx, feederAMidY);
-      svgLine(feederB.x + CELL_WIDTH, feederBMidY, jx, feederBMidY);
-      svgLine(jx, feederAMidY, jx, feederBMidY);
-      svgLine(jx, midY, pos.x, midY);
+      const boldAny = boldA || boldB;
+      svgLine(feederA.x + CELL_WIDTH, feederAMidY, jx, feederAMidY, boldA);
+      svgLine(feederB.x + CELL_WIDTH, feederBMidY, jx, feederBMidY, boldB);
+      svgLine(jx, feederAMidY, jx, feederBMidY, boldAny);
+      svgLine(jx, midY, pos.x, midY, boldAny);
 
     } else {
       const jx = feederA.x - (feederA.x - (pos.x + CELL_WIDTH)) / 2;
-      svgLine(feederA.x, feederAMidY, jx, feederAMidY);
-      svgLine(feederB.x, feederBMidY, jx, feederBMidY);
-      svgLine(jx, feederAMidY, jx, feederBMidY);
-      svgLine(jx, midY, pos.x + CELL_WIDTH, midY);
+      const boldAny = boldA || boldB;
+      svgLine(feederA.x, feederAMidY, jx, feederAMidY, boldA);
+      svgLine(feederB.x, feederBMidY, jx, feederBMidY, boldB);
+      svgLine(jx, feederAMidY, jx, feederBMidY, boldAny);
+      svgLine(jx, midY, pos.x + CELL_WIDTH, midY, boldAny);
     }
   }
 

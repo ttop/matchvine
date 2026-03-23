@@ -114,6 +114,7 @@ export function createBracket(size, title) {
     size,
     backgroundColor: '#ffffff',
     showSeedNumbers: true,
+    autoColor: true,
     layoutMode: 'staggered',
     createdAt: now,
     updatedAt: now,

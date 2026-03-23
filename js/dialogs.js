@@ -185,6 +185,7 @@ export function openSettingsDialog() {
 
   // Seed numbers toggle
   document.getElementById('toggle-seed-numbers').checked = bracket.showSeedNumbers;
+  document.getElementById('toggle-auto-color').checked = bracket.autoColor !== false;
 
   // Layout toggles
   const layoutToggles = document.getElementById('layout-toggles');
@@ -535,6 +536,11 @@ export function setupDialogEvents(storageFns) {
     renderBracket(state.bracket);
   });
 
+  document.getElementById('toggle-auto-color').addEventListener('change', function() {
+    state.bracket.autoColor = this.checked;
+    state.bracket.updatedAt = new Date().toISOString();
+  });
+
   // ── Layout toggle ──
   const layoutTogglesEl = document.getElementById('layout-toggles');
   if (layoutTogglesEl) {
@@ -683,7 +689,9 @@ export function setupDialogEvents(storageFns) {
         }
       }
 
-      const color = getRandomColor(usedColors, excludeColors);
+      const color = bracket.autoColor !== false
+        ? getRandomColor(usedColors, excludeColors)
+        : '#ffffff';
       usedColors.add(color);
       const cell = createCell(names[i], color);
       cell.sourceSlot = emptySlots[i];
