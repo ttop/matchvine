@@ -219,18 +219,34 @@ function layoutStaggered(bracket) {
       const feederA = posMap[feeders[0]]; // top feeder
       const feederB = posMap[feeders[1]]; // bottom feeder
 
-      // Nest centered between feeders: midpoint of the gap between a's bottom and b's top
-      const gapTop = feederA.y + CELL_HEIGHT; // bottom edge of top feeder
-      const gapBottom = feederB.y;             // top edge of bottom feeder
-      const y = gapTop + (gapBottom - gapTop - CELL_HEIGHT) / 2;
+      const isSemis = round === roundsPerHalf - 1;
+
+      let y;
+      if (isSemis) {
+        // Semis: push toward center vertically instead of centering between feeders.
+        // Left-half semis: top semi aligns with its bottom feeder (pushed down)
+        //                  bottom semi aligns with its top feeder (pushed up)
+        // This lets the semis nestle close to the champion.
+        const isTopHalfOfSide = idx < getSlotsInRound(size, round) / (leftHalf ? 2 : 2);
+        // For the left half there's only 1 semis cell; for right half only 1.
+        // Each half has exactly 1 semi. Left semi pushed down, right semi pushed up.
+        if (leftHalf) {
+          y = feederB.y; // align with bottom feeder — pushed down toward center
+        } else {
+          y = feederA.y; // align with top feeder — pushed up toward center
+        }
+      } else {
+        // Normal rounds: nest centered between feeders
+        const gapTop = feederA.y + CELL_HEIGHT;
+        const gapBottom = feederB.y;
+        y = gapTop + (gapBottom - gapTop - CELL_HEIGHT) / 2;
+      }
 
       let x;
-      const isSemis = round === roundsPerHalf - 1;
-      const nudge = isSemis ? Math.floor(STAGGER_X * 0.35) : 0;
       if (leftHalf) {
-        x = LEFT_PADDING + round * STAGGER_X - nudge;
+        x = LEFT_PADDING + round * STAGGER_X;
       } else {
-        x = rightEdgeX - round * STAGGER_X + nudge;
+        x = rightEdgeX - round * STAGGER_X;
       }
 
       const pos = {
