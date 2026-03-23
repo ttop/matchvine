@@ -237,11 +237,12 @@ export function renderBracket(bracket, options) {
 
             const leftHalf = isLeftHalf(size, pos.round, pos.indexInRound);
             if (leftHalf) {
-              promoteBtn.textContent = '\u25B6'; // ▶
-              promoteBtn.style.right = '-28px';
+              promoteBtn.textContent = '\u00BB'; // »
+              promoteBtn.style.right = '-26px';
             } else {
-              promoteBtn.textContent = '\u25C0'; // ◀
-              promoteBtn.style.left = '-28px';
+              promoteBtn.textContent = '\u00AB'; // «
+              promoteBtn.style.left = '-26px';
+              promoteBtn.classList.add('promote-left');
             }
 
             cellEl.style.overflow = 'visible';
