@@ -589,22 +589,72 @@
       transform: translateX(16px);
     }
 
-    /* ── Brackets List Dialog specifics ────────────────────────────────────── */
+    /* ── Brackets Dropdown ──────────────────────────────────────────────────── */
+    #brackets-dropdown-wrapper {
+      position: relative;
+    }
+
+    #brackets-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 6px;
+      width: 320px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      z-index: 1001;
+      overflow: hidden;
+    }
+
     #bracket-entries {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
       max-height: 300px;
       overflow-y: auto;
-      margin-bottom: 12px;
+      padding: 8px 8px 0;
+    }
+
+    #bracket-entries:empty {
+      padding: 0;
+    }
+
+    .brackets-dropdown-empty {
+      font-size: 13px;
+      color: #9ca3af;
+      text-align: center;
+      padding: 16px 0;
+    }
+
+    .brackets-dropdown-footer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .brackets-dropdown-footer #new-bracket-btn {
+      flex: 1;
+    }
+
+    .brackets-dropdown-file-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .brackets-dropdown-file-actions .toolbar-btn {
+      font-size: 11px;
+      padding: 6px 8px;
     }
 
     .bracket-entry {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 12px;
-      border: 1px solid #e5e7eb;
+      padding: 8px 10px;
+      border: 1px solid transparent;
       border-radius: 8px;
       cursor: pointer;
       transition: background 0.1s;
@@ -612,6 +662,11 @@
 
     .bracket-entry:hover {
       background: #f9fafb;
+    }
+
+    .bracket-entry-active {
+      border-color: #3b82f6;
+      background: #eff6ff;
     }
 
     .bracket-entry-name {
@@ -782,9 +837,23 @@
     <button class="toolbar-btn" id="btn-export-png" title="Export as PNG">
       📷 Export PNG
     </button>
-    <button class="toolbar-btn" id="btn-brackets" title="My brackets">
-      📁 Brackets
-    </button>
+    <div id="brackets-dropdown-wrapper">
+      <button class="toolbar-btn" id="btn-brackets" title="My brackets">
+        📁 Brackets
+      </button>
+      <div id="brackets-dropdown" class="hidden">
+        <div id="bracket-entries">
+          <!-- bracket entry items injected by JS -->
+        </div>
+        <div class="brackets-dropdown-footer">
+          <button id="new-bracket-btn">+ New Bracket</button>
+          <div class="brackets-dropdown-file-actions">
+            <button class="toolbar-btn" id="btn-save" title="Save bracket to file">💾 Save</button>
+            <button class="toolbar-btn" id="btn-load" title="Load bracket from file">📂 Load</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Hidden file input for load -->
     <input type="file" id="load-file-input" accept=".bracket" class="hidden">
@@ -882,23 +951,6 @@
     </div>
   </div>
 
-  <!-- ── Brackets List Dialog ──────────────────────────────────────────────── -->
-  <div id="brackets-dialog" class="dialog hidden">
-    <div class="dialog-header">
-      <span class="dialog-title">My Brackets</span>
-      <button class="dialog-close" id="brackets-dialog-close" title="Close">✕</button>
-    </div>
-    <div class="dialog-body">
-      <div id="bracket-entries">
-        <!-- bracket entry items injected by JS -->
-      </div>
-      <button id="new-bracket-btn">+ New Bracket</button>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button class="toolbar-btn" id="btn-save" style="flex:1;justify-content:center" title="Save bracket to file">💾 Save to File</button>
-        <button class="toolbar-btn" id="btn-load" style="flex:1;justify-content:center" title="Load bracket from file">📂 Load from File</button>
-      </div>
-    </div>
-  </div>
 
   <!-- ── New Bracket Dialog ───────────────────────────────────────────────── -->
   <div id="new-bracket-dialog" class="dialog hidden">
