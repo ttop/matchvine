@@ -483,6 +483,7 @@ export function setupDialogEvents(storageFns) {
     newBracket.titleFont = bracket.titleFont;
     newBracket.backgroundColor = bracket.backgroundColor;
     newBracket.showSeedNumbers = bracket.showSeedNumbers;
+    newBracket.layoutMode = bracket.layoutMode;
 
     for (const entry of oldRound0Cells) {
       if (entry.index < newSize) {
