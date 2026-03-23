@@ -272,7 +272,7 @@ export function renderBracket(bracket, options) {
               promoteBtn.classList.add('promote-left');
             }
 
-            cellEl.style.overflow = 'visible';
+
             cellEl.appendChild(promoteBtn);
           }
         }
