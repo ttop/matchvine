@@ -1,9 +1,6 @@
 name: Deploy Preview Branch
 
 on:
-  push:
-    paths:
-      - '.github/workflows/preview.yml'
   workflow_dispatch:
     inputs:
       branch:
