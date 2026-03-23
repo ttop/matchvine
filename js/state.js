@@ -84,6 +84,81 @@ export function getChampionSlotIndex(size) {
   return 2 * size - 2;
 }
 
+/**
+ * Generates NCAA-style matchup positions within a sub-bracket of size n.
+ * Returns an array where index = position, value = seed rank at that position.
+ * E.g. size 4 → [1, 4, 3, 2] meaning position 0 gets seed 1, position 1 gets seed 4, etc.
+ * This ensures 1 plays N, and top seeds don't meet until late rounds.
+ */
+function generateMatchupSeeds(n) {
+  if (n === 1) return [1];
+  if (n === 2) return [1, 2];
+  const prev = generateMatchupSeeds(n / 2);
+  const result = [];
+  for (const seed of prev) {
+    result.push(seed);
+    result.push(n + 1 - seed);
+  }
+  return result;
+}
+
+/**
+ * Returns the traditional bracket seeding order for round-0 slot indices,
+ * using quadrant-based seeding (like NCAA March Madness).
+ *
+ * The bracket is divided into quadrants (4 for size >= 8, 2 halves for size 4).
+ * Each quadrant has its own seedings 1..Q where Q = size / numQuadrants.
+ * Seed 1 plays seed Q, seed 2 plays seed Q-1, etc. within each quadrant.
+ *
+ * Returns an array of round-0 slot indices in the order seeds should be placed.
+ * For a 64-player bracket: first 4 entries are the seed-1 slots for each
+ * quadrant, next 4 are the seed-2 slots, etc.
+ */
+export function getBracketSeedOrder(size) {
+  if (size <= 2) {
+    return [getSlotIndex(size, 0, 0), getSlotIndex(size, 0, 1)].slice(0, size);
+  }
+
+  const numQuadrants = size >= 8 ? 4 : 2;
+  const quadrantSize = size / numQuadrants;
+
+  const quadrantSeeds = generateMatchupSeeds(quadrantSize);
+
+  // For each quadrant, build a map: seed rank → slot index
+  const quadrantSlotForSeed = [];
+  for (let q = 0; q < numQuadrants; q++) {
+    const slotForSeed = new Array(quadrantSize + 1);
+    for (let i = 0; i < quadrantSize; i++) {
+      const roundZeroIndex = q * quadrantSize + i;
+      slotForSeed[quadrantSeeds[i]] = getSlotIndex(size, 0, roundZeroIndex);
+    }
+    quadrantSlotForSeed.push(slotForSeed);
+  }
+
+  // Round-robin across quadrants for each seed rank
+  const order = [];
+  for (let r = 1; r <= quadrantSize; r++) {
+    for (let q = 0; q < numQuadrants; q++) {
+      order.push(quadrantSlotForSeed[q][r]);
+    }
+  }
+
+  return order;
+}
+
+/**
+ * Returns the per-quadrant seed rank (1-based) for a given round-0 index.
+ * For a 64-bracket, each quadrant has seeds 1-16; this returns which seed
+ * a given slot position holds within its quadrant.
+ */
+export function getQuadrantSeedRank(size, roundZeroIndex) {
+  const numQuadrants = size >= 8 ? 4 : (size >= 4 ? 2 : 1);
+  const quadrantSize = size / numQuadrants;
+  const indexInQuadrant = roundZeroIndex % quadrantSize;
+  const quadrantSeeds = generateMatchupSeeds(quadrantSize);
+  return quadrantSeeds[indexInQuadrant];
+}
+
 // ── Factory functions ─────────────────────────────────────────────────────
 
 export function createBracket(size, title) {

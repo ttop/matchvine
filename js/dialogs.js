@@ -4,7 +4,7 @@ import {
 import {
   state, createBracket, createCell,
   getSlotsInRound, getSlotIndex, getTotalRounds,
-  getNextSlot, hasTournamentStarted,
+  getNextSlot, hasTournamentStarted, getBracketSeedOrder,
 } from './state.js';
 import { escapeHtml, getAutoTextColor, formatRelativeTime, getRandomColor } from './utils.js';
 import { renderBracket } from './render.js';
@@ -257,15 +257,12 @@ function populateFontPicker() {
 // ── Seed Dialog ──────────────────────────────────────────────────────────
 
 function getEmptyFirstRoundSlots(bracket) {
-  const empty = [];
-  for (let i = 0; i < bracket.size; i++) {
-    const slotIndex = getSlotIndex(bracket.size, 0, i);
+  // Return empty slots in traditional bracket seeding order (NCAA-style)
+  const seedOrder = getBracketSeedOrder(bracket.size);
+  return seedOrder.filter(slotIndex => {
     const slot = bracket.slots[slotIndex];
-    if (!slot.cellId) {
-      empty.push(slotIndex);
-    }
-  }
-  return empty;
+    return !slot.cellId;
+  });
 }
 
 function updateSeedPreview() {

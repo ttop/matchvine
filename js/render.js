@@ -6,7 +6,7 @@ import {
 import {
   getSlotsInRound, getSlotIndex, getTotalRounds,
   getMatchupPair, getNextSlot, getChampionSlotIndex,
-  isLeftHalf, hasTournamentStarted,
+  isLeftHalf, hasTournamentStarted, getQuadrantSeedRank,
 } from './state.js';
 import { escapeHtml } from './utils.js';
 
@@ -504,7 +504,7 @@ export function renderBracket(bracket, options) {
     cellWrapper.appendChild(labelEl);
   }
 
-  // ── 8. Seed numbers ──
+  // ── 8. Seed numbers (per-quadrant) ──
   if (bracket.showSeedNumbers) {
     for (let i = 0; i < size; i++) {
       const slotIndex = getSlotIndex(size, 0, i);
@@ -513,7 +513,7 @@ export function renderBracket(bracket, options) {
 
       const seedEl = document.createElement('div');
       seedEl.className = 'seed-number';
-      seedEl.textContent = '#' + (i + 1);
+      seedEl.textContent = '#' + getQuadrantSeedRank(size, i);
       seedEl.style.top = (pos.y + CELL_HEIGHT / 2 - 7) + 'px';
 
       if (pos.isLeftHalf) {
