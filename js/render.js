@@ -41,12 +41,16 @@ export function autoSizeText(cellDiv) {
     return;
   }
 
-  const maxW = cellDiv.clientWidth - 16;  // padding
-  const maxH = cellDiv.clientHeight - 8;
+  // Use CELL_WIDTH constant for consistency (clientWidth varies with border thickness)
+  const isChamp = cellDiv.classList.contains('cell-champion');
+  const baseWidth = isChamp ? CHAMP_WIDTH : CELL_WIDTH;
+  const maxW = baseWidth - 20;  // padding
+  const maxH = CELL_HEIGHT - 10;
 
-  // Create a hidden measurement span
+  // Create a hidden measurement span that inherits the cell's font
   const measure = document.createElement('span');
-  measure.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;';
+  const computedFont = getComputedStyle(cellDiv).fontFamily;
+  measure.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-family:' + computedFont + ';';
   measure.textContent = textEl.textContent;
   document.body.appendChild(measure);
 
