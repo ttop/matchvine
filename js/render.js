@@ -353,7 +353,7 @@ export function renderBracket(bracket, options) {
   const defaultStrokeColor = '#d1d5db';
   const defaultStrokeWidth = '1.5';
   const winnerStrokeColor = '#6b7280';
-  const winnerStrokeWidth = '3';
+  const winnerStrokeWidth = '2.5';
 
   function svgLine(x1, y1, x2, y2, bold) {
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
