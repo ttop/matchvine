@@ -1604,57 +1604,57 @@
       const bracket = state.bracket;
       const slot = bracket.slots[slotIndex];
 
-      // If empty slot, create a new cell first, then re-render
-      if (!slot.cellId) {
+      const wasEmpty = !slot.cellId;
+
+      // If empty slot, create a new cell first
+      if (wasEmpty) {
         const color = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
         const newCell = createCell('', color);
         bracket.cells[newCell.id] = newCell;
         slot.cellId = newCell.id;
+        // Re-render to show the new cell with its color
         renderBracket(bracket);
       }
 
       state.editingSlotIndex = slotIndex;
-
-      // After renderBracket (and its monkey-patches), find the freshly rendered cell
-      const container = document.getElementById('bracket-container');
-      const cellEl = container.querySelector(`.cell[data-slot-index="${slotIndex}"]`);
-      if (!cellEl) return;
-
-      // The monkey-patched renderBracket already wraps content in .cell-text spans
-      let textEl = cellEl.querySelector('.cell-text');
-      if (!textEl) {
-        const existingHtml = cellEl.innerHTML;
-        cellEl.innerHTML = '';
-        textEl = document.createElement('span');
-        textEl.className = 'cell-text';
-        textEl.style.display = 'block';
-        textEl.style.width = '100%';
-        textEl.style.textAlign = 'center';
-        textEl.style.outline = 'none';
-        textEl.style.wordBreak = 'break-word';
-        textEl.innerHTML = existingHtml;
-        cellEl.appendChild(textEl);
-      }
-
-      // Save text before edit
       const cell = bracket.cells[slot.cellId];
       state.beforeEditText = cell ? cell.text : '';
 
-      cellEl.classList.add('cell-editing');
-      cellEl.classList.remove('cell-empty');
-      textEl.contentEditable = 'true';
+      // Use setTimeout to ensure all monkey-patched renderBracket layers have finished
+      setTimeout(() => {
+        const container = document.getElementById('bracket-container');
+        const cellEl = container.querySelector(`.cell[data-slot-index="${slotIndex}"]`);
+        if (!cellEl) return;
 
-      // Use requestAnimationFrame to ensure DOM is settled before focusing
-      requestAnimationFrame(() => {
+        let textEl = cellEl.querySelector('.cell-text');
+        if (!textEl) {
+          textEl = document.createElement('span');
+          textEl.className = 'cell-text';
+          textEl.style.display = 'block';
+          textEl.style.width = '100%';
+          textEl.style.textAlign = 'center';
+          textEl.style.outline = 'none';
+          textEl.style.wordBreak = 'break-word';
+          cellEl.innerHTML = '';
+          cellEl.appendChild(textEl);
+        }
+
+        // Clear the "?" placeholder for empty cells
+        if (wasEmpty) textEl.textContent = '';
+
+        cellEl.classList.add('cell-editing');
+        cellEl.classList.remove('cell-empty');
+        textEl.contentEditable = 'true';
         textEl.focus();
+
         // Place cursor at end
         const range = document.createRange();
-        const sel   = window.getSelection();
+        const sel = window.getSelection();
         range.selectNodeContents(textEl);
         range.collapse(false);
         sel.removeAllRanges();
         sel.addRange(range);
-      });
+      }, 0);
     }
 
     // ── Patch renderBracket to use .cell-text spans and call autoSizeText ─
