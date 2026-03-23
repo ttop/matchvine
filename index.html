@@ -1672,63 +1672,63 @@
       const cell = bracket.cells[slot.cellId];
       state.beforeEditText = cell ? cell.text : '';
 
-      // Use setTimeout to ensure all monkey-patched renderBracket layers have finished
-      setTimeout(() => {
-        const container = document.getElementById('bracket-container');
-        const cellEl = container.querySelector(`.cell[data-slot-index="${slotIndex}"]`);
-        if (!cellEl) return;
+      // Find the cell in the DOM (renderBracket already ran synchronously above if needed)
+      const container = document.getElementById('bracket-container');
+      const cellEl = container.querySelector(`.cell[data-slot-index="${slotIndex}"]`);
+      if (!cellEl) return;
 
-        let textEl = cellEl.querySelector('.cell-text');
-        if (!textEl) {
-          textEl = document.createElement('span');
-          textEl.className = 'cell-text';
-          textEl.style.display = 'flex';
-          textEl.style.alignItems = 'center';
-          textEl.style.justifyContent = 'center';
-          textEl.style.width = '100%';
-          textEl.style.height = '100%';
-          textEl.style.textAlign = 'center';
-          textEl.style.outline = 'none';
-          textEl.style.wordBreak = 'break-word';
-          textEl.style.padding = '4px 8px';
-          textEl.style.boxSizing = 'border-box';
-          textEl.style.lineHeight = '1.2';
-          cellEl.innerHTML = '';
-          cellEl.appendChild(textEl);
-        }
+      let textEl = cellEl.querySelector('.cell-text');
+      if (!textEl) {
+        textEl = document.createElement('span');
+        textEl.className = 'cell-text';
+        cellEl.innerHTML = '';
+        cellEl.appendChild(textEl);
+      }
 
-        // Clear the "?" placeholder for empty cells
-        if (wasEmpty) textEl.textContent = '';
+      // Clear the "?" placeholder for empty cells
+      if (wasEmpty) textEl.textContent = '';
 
-        cellEl.classList.add('cell-editing');
-        cellEl.classList.remove('cell-empty');
-        textEl.contentEditable = 'true';
-        textEl.spellcheck = false;
-        textEl.setAttribute('spellcheck', 'false');
+      cellEl.classList.add('cell-editing');
+      cellEl.classList.remove('cell-empty');
+      textEl.contentEditable = 'true';
+      textEl.spellcheck = false;
+      textEl.setAttribute('spellcheck', 'false');
 
-        // Add keydown handler directly on the contenteditable element using CAPTURE phase
-        // This ensures we intercept Enter before the contenteditable inserts a <br>/<div>
-        textEl.addEventListener('keydown', function(e) {
-          console.log('[Matchvine] textEl keydown (capture):', e.key, 'shiftKey:', e.shiftKey);
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            confirmEdit();
-            return false;
+      // Intercept Enter key on the contenteditable element (capture phase)
+      textEl.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          confirmEdit();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          // Revert
+          const bracket = state.bracket;
+          const slot = bracket.slots[state.editingSlotIndex];
+          if (slot && slot.cellId && bracket.cells[slot.cellId]) {
+            if (state.beforeEditText === '' || state.beforeEditText === null) {
+              delete bracket.cells[slot.cellId];
+              slot.cellId = null;
+            } else {
+              bracket.cells[slot.cellId].text = state.beforeEditText;
+            }
           }
-        }, true);
+          exitEditMode();
+          renderBracket(bracket);
+        }
+      }, true);
 
+      // Focus after a microtask to ensure DOM is settled
+      Promise.resolve().then(() => {
         textEl.focus();
-
-        // Place cursor at end
         const range = document.createRange();
         const sel = window.getSelection();
         range.selectNodeContents(textEl);
         range.collapse(false);
         sel.removeAllRanges();
         sel.addRange(range);
-      }, 0);
+      });
     }
 
     // ── Patch renderBracket to use .cell-text spans and call autoSizeText ─
@@ -1804,27 +1804,8 @@
 
     // ── Event: keydown for editing (Escape only — Enter is handled on textEl in capture phase) ─
 
-    document.addEventListener('keydown', function(e) {
-      if (state.editingSlotIndex === null) return;
-
-      if (e.key === 'Escape') {
-        // Revert to before-edit text; if cell was just created from empty slot, remove it
-        const bracket = state.bracket;
-        const slot = bracket.slots[state.editingSlotIndex];
-        if (slot && slot.cellId && bracket.cells[slot.cellId]) {
-          if (state.beforeEditText === '' || state.beforeEditText === null) {
-            // Cell was created from empty slot — remove it entirely
-            delete bracket.cells[slot.cellId];
-            slot.cellId = null;
-          } else {
-            bracket.cells[slot.cellId].text = state.beforeEditText;
-          }
-        }
-        exitEditMode();
-        renderBracket(bracket);
-      }
-      // Shift+Enter: allow default (inserts <br> in contenteditable)
-    });
+    // Escape and Enter for editing are handled by the textEl capture-phase handler
+    // in enterEditMode(). No document-level keydown handler needed for editing.
 
     // ── Event: click outside to confirm ──────────────────────────────────
 
