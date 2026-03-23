@@ -642,13 +642,7 @@
       /* inherits .color-grid styles when class is added */
     }
 
-    #text-color-row {
-      display: flex;
-      gap: 5px;
-      flex-wrap: wrap;
-    }
-
-    /* auto-contrast removed — always auto-calculated */
+    /* auto-contrast — always auto-calculated */
 
     /* ── Drag and Drop ─────────────────────────────────────────────────── */
     .cell.dragging {
@@ -859,12 +853,6 @@
         <!-- color swatches injected by JS -->
       </div>
     </div>
-    <div class="popover-section">
-      <div class="popover-section-label">Text Color (auto)</div>
-      <div id="text-color-row">
-        <!-- auto-calculated text color preview -->
-      </div>
-    </div>
   </div>
 
   <script>
@@ -872,18 +860,18 @@
 
     const BRACKET_SIZES = [4, 8, 16, 32, 64, 128];
 
-    // 5 rows of 8: pastels, medium tones, vivid/saturated, very light tints, neutrals
+    // 5 rows of 8: vivid, medium/pastel, light, earth tones, neutral/utility
     const COLOR_PALETTE = [
-      // Row 1: Pastels
-      '#ffb3b3', '#ffcc99', '#fff099', '#b3ffb3', '#b3ffff', '#b3ccff', '#d9b3ff', '#ffb3e6',
-      // Row 2: Medium tones
-      '#ff8080', '#ff9f40', '#ffd700', '#66cc66', '#40bfbf', '#6699ff', '#b366ff', '#ff66b3',
-      // Row 3: Vivid/saturated
-      '#ff4d4d', '#ff8000', '#f0c800', '#33b833', '#00aaaa', '#3366ff', '#9933ff', '#ff3399',
-      // Row 4: Very light tints
-      '#fff0f0', '#fff5e6', '#fffde6', '#f0fff0', '#e6ffff', '#eef2ff', '#f5f0ff', '#fff0f9',
-      // Row 5: Neutrals
-      '#ffffff', '#f3f4f6', '#d1d5db', '#9ca3af', '#f5f0e8', '#e8dcc8', '#d4c4a0', '#c8b88a',
+      // Row 1: Vivid (red, orange, yellow, green, teal, blue, purple, pink)
+      '#e53e3e', '#dd6b20', '#d69e2e', '#38a169', '#319795', '#3182ce', '#805ad5', '#d53f8c',
+      // Row 2: Medium / pastel versions
+      '#fc8181', '#f6ad55', '#f6e05e', '#68d391', '#4fd1c5', '#63b3ed', '#b794f4', '#f687b3',
+      // Row 3: Light versions
+      '#fed7d7', '#feebc8', '#fefcbf', '#c6f6d5', '#b2f5ea', '#bee3f8', '#e9d8fd', '#fed7e2',
+      // Row 4: Muted / earth tones (brown, tan, olive, sage, mauve, dusty rose, slate, warm gray)
+      '#8b6f47', '#c4a882', '#7c8c5e', '#87a88e', '#9b7ea4', '#c48a8a', '#6b8399', '#a19488',
+      // Row 5: Neutral / utility (white, light grays, medium gray, pale yellow, pale blue, pale green, pale pink)
+      '#ffffff', '#f0f0f0', '#d4d4d4', '#a3a3a3', '#fef9c3', '#dbeafe', '#d1fae5', '#fce7f3',
     ];
 
     const TEXT_COLORS = [
@@ -1346,7 +1334,7 @@
         } else {
           // Empty slot
           if (isChamp) {
-            cellEl.innerHTML = '🏆 ?';
+            cellEl.innerHTML = '🏆';
           } else {
             cellEl.textContent = '?';
           }
@@ -1573,12 +1561,18 @@
           // Strip any other HTML tags
           const tmp = document.createElement('div');
           tmp.innerHTML = rawHtml;
-          const newText = tmp.textContent;
+          const newText = (tmp.textContent || '').replace(/^[\s\n\r]+|[\s\n\r]+$/g, '');
 
           const bracket = state.bracket;
           const slot = bracket.slots[state.editingSlotIndex];
           if (slot && slot.cellId && bracket.cells[slot.cellId]) {
-            bracket.cells[slot.cellId].text = newText;
+            if (newText === '') {
+              // Empty text — remove the cell entirely
+              delete bracket.cells[slot.cellId];
+              slot.cellId = null;
+            } else {
+              bracket.cells[slot.cellId].text = newText;
+            }
           }
         }
       }
@@ -1649,6 +1643,16 @@
         cellEl.classList.add('cell-editing');
         cellEl.classList.remove('cell-empty');
         textEl.contentEditable = 'true';
+
+        // Add keydown handler directly on the contenteditable element
+        textEl.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            confirmEdit();
+          }
+        });
+
         textEl.focus();
 
         // Place cursor at end
@@ -1717,9 +1721,8 @@
       const round = parseInt(cellEl.getAttribute('data-round'), 10);
       const slot = state.bracket.slots[slotIndex];
 
-      // For rounds > 0, only allow editing if the slot already has a cell (promoted).
-      // Don't allow creating new cells in later rounds — those must be filled via promote.
-      if (round > 0 && (!slot || !slot.cellId)) {
+      // Only allow editing in round 0. Later rounds are filled via promote only.
+      if (round > 0) {
         return;
       }
 
@@ -1864,7 +1867,6 @@
 
       const popover = document.getElementById('format-popover');
       const bgGrid = document.getElementById('bg-color-grid');
-      const textRow = document.getElementById('text-color-row');
 
       // Populate background color grid
       bgGrid.innerHTML = '';
@@ -1877,24 +1879,6 @@
         if (cell.bgColor === color) swatch.classList.add('selected');
         bgGrid.appendChild(swatch);
       });
-
-      // Show auto-calculated text color as read-only preview
-      textRow.innerHTML = '';
-      const autoColor = getAutoTextColor(cell.bgColor);
-      const previewSwatch = document.createElement('div');
-      previewSwatch.style.backgroundColor = autoColor;
-      previewSwatch.style.width = '24px';
-      previewSwatch.style.height = '24px';
-      previewSwatch.style.borderRadius = '5px';
-      previewSwatch.style.border = '2px solid #3b82f6';
-      previewSwatch.style.flexShrink = '0';
-      textRow.appendChild(previewSwatch);
-      const label = document.createElement('span');
-      label.style.fontSize = '11px';
-      label.style.color = '#6b7280';
-      label.style.marginLeft = '8px';
-      label.textContent = autoColor === '#1a1a1a' ? 'Dark text' : 'Light text';
-      textRow.appendChild(label);
 
       // Position popover relative to the cell using fixed/screen coordinates
       const container = document.getElementById('bracket-container');
@@ -2060,7 +2044,26 @@
       const slot = bracket.slots[slotIndex];
       if (!slot) return;
 
+      const cellId = slot.cellId;
+      // Clear this slot
       slot.cellId = null;
+
+      // Also clear any downstream (higher-round) slots that have this same cellId,
+      // since the promotion chain is now broken
+      if (cellId) {
+        const round = slot.round;
+        const totalRounds = getTotalRounds(bracket.size);
+        for (let r = round + 1; r < totalRounds; r++) {
+          const slotsInRound = getSlotsInRound(bracket.size, r);
+          for (let idx = 0; idx < slotsInRound; idx++) {
+            const si = getSlotIndex(bracket.size, r, idx);
+            if (bracket.slots[si] && bracket.slots[si].cellId === cellId) {
+              bracket.slots[si].cellId = null;
+            }
+          }
+        }
+      }
+
       renderBracket(bracket);
     });
 
@@ -2261,16 +2264,38 @@
       const bracket = state.bracket;
       if (newSize === bracket.size) return;
 
-      // Check if bracket has data
+      const oldSize = bracket.size;
       const hasData = Object.keys(bracket.cells).length > 0;
-      if (hasData) {
-        if (!confirm('Changing size will clear all bracket data. Continue?')) return;
+
+      if (hasData && newSize < oldSize) {
+        // Decreasing: warn that cells beyond the new size will be lost
+        if (!confirm(`Decreasing from ${oldSize} to ${newSize} will remove entries beyond slot ${newSize}. Continue?`)) return;
+      }
+
+      // Collect round-0 cell data from old bracket
+      const oldRound0Cells = [];
+      for (let i = 0; i < oldSize; i++) {
+        const slotIndex = getSlotIndex(oldSize, 0, i);
+        const slot = bracket.slots[slotIndex];
+        if (slot && slot.cellId && bracket.cells[slot.cellId]) {
+          oldRound0Cells.push({ index: i, cellId: slot.cellId, cell: bracket.cells[slot.cellId] });
+        }
       }
 
       const newBracket = createBracket(newSize, bracket.title);
       newBracket.titleFont = bracket.titleFont;
       newBracket.backgroundColor = bracket.backgroundColor;
       newBracket.showSeedNumbers = bracket.showSeedNumbers;
+
+      // Copy round-0 cells that fit within the new size
+      for (const entry of oldRound0Cells) {
+        if (entry.index < newSize) {
+          const newSlotIndex = getSlotIndex(newSize, 0, entry.index);
+          newBracket.cells[entry.cellId] = entry.cell;
+          newBracket.slots[newSlotIndex].cellId = entry.cellId;
+        }
+      }
+
       state.bracket = newBracket;
 
       // Update size toggle highlights
@@ -2345,13 +2370,23 @@
       return GOOGLE_FONTS.includes(fontFamily);
     }
 
+    function isSystemFont(fontFamily) {
+      return DEFAULT_FONTS.some(f => f.family === fontFamily);
+    }
+
     function applyFont(bracket) {
       const font = bracket.titleFont || 'sans-serif';
       const container = document.getElementById('bracket-container');
-      container.style.fontFamily = `"${font}", sans-serif`;
-
       const titleEl = document.getElementById('bracket-title');
-      titleEl.style.fontFamily = `"${font}", sans-serif`;
+
+      // System/generic fonts should not be quoted
+      if (isSystemFont(font)) {
+        container.style.fontFamily = `${font}`;
+        titleEl.style.fontFamily = `${font}`;
+      } else {
+        container.style.fontFamily = `"${font}", sans-serif`;
+        titleEl.style.fontFamily = `"${font}", sans-serif`;
+      }
     }
 
     function populateFontPicker() {
@@ -3012,7 +3047,7 @@
 
         // Draw text
         ctx.fillStyle = textColor;
-        const displayText = isChamp && text ? '\u{1F3C6} ' + text : (isChamp ? '\u{1F3C6} ?' : text);
+        const displayText = isChamp && text ? '\u{1F3C6} ' + text : (isChamp ? '\u{1F3C6}' : text);
         // Auto-size font
         let fontSize = 14;
         ctx.font = `500 ${fontSize}px "${fontFamily}", sans-serif`;
