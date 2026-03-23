@@ -1,6 +1,6 @@
 # Matchvine
 
-Tournament bracket maker — a single-page web app with no build step, no framework, and zero runtime dependencies (aside from optional Google Fonts).
+Tournament bracket maker — a simple web app with no ads.
 
 **Live site:** [ttop.github.io/matchvine](https://ttop.github.io/matchvine)
 
