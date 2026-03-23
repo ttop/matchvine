@@ -169,6 +169,21 @@
       color: #9ca3af;
     }
 
+    .cell-text {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      outline: none;
+      word-break: break-word;
+      padding: 4px 8px;
+      box-sizing: border-box;
+      line-height: 1.2;
+      overflow: hidden;
+    }
+
     /* Make cell-text not intercept drag events when cell is draggable */
     .cell[draggable="true"] .cell-text {
       pointer-events: none;
@@ -447,7 +462,7 @@
 
     .font-picker-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 6px;
     }
 
@@ -640,6 +655,10 @@
 
     #bg-color-grid {
       /* inherits .color-grid styles when class is added */
+    }
+
+    #settings-bg-color-grid {
+      grid-template-columns: repeat(5, 1fr);
     }
 
     /* auto-contrast — always auto-calculated */
@@ -860,18 +879,18 @@
 
     const BRACKET_SIZES = [4, 8, 16, 32, 64, 128];
 
-    // 5 rows of 8: vivid, medium/pastel, light, earth tones, neutral/utility
+    // MS Paint-style organized palette: 5 rows of 8
     const COLOR_PALETTE = [
-      // Row 1: Vivid (red, orange, yellow, green, teal, blue, purple, pink)
-      '#e53e3e', '#dd6b20', '#d69e2e', '#38a169', '#319795', '#3182ce', '#805ad5', '#d53f8c',
-      // Row 2: Medium / pastel versions
-      '#fc8181', '#f6ad55', '#f6e05e', '#68d391', '#4fd1c5', '#63b3ed', '#b794f4', '#f687b3',
-      // Row 3: Light versions
-      '#fed7d7', '#feebc8', '#fefcbf', '#c6f6d5', '#b2f5ea', '#bee3f8', '#e9d8fd', '#fed7e2',
-      // Row 4: Muted / earth tones (brown, tan, olive, sage, mauve, dusty rose, slate, warm gray)
-      '#8b6f47', '#c4a882', '#7c8c5e', '#87a88e', '#9b7ea4', '#c48a8a', '#6b8399', '#a19488',
-      // Row 5: Neutral / utility (white, light grays, medium gray, pale yellow, pale blue, pale green, pale pink)
-      '#ffffff', '#f0f0f0', '#d4d4d4', '#a3a3a3', '#fef9c3', '#dbeafe', '#d1fae5', '#fce7f3',
+      // Row 1 - Vivid
+      '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899',
+      // Row 2 - Medium
+      '#f87171', '#fb923c', '#facc15', '#4ade80', '#2dd4bf', '#60a5fa', '#a78bfa', '#f472b6',
+      // Row 3 - Pastel
+      '#fecaca', '#fed7aa', '#fef08a', '#bbf7d0', '#99f6e4', '#bfdbfe', '#ddd6fe', '#fbcfe8',
+      // Row 4 - Muted/Earth
+      '#a16207', '#d2b48c', '#6b7f3a', '#6b8f71', '#64748b', '#4682b4', '#9f7aea', '#d4918f',
+      // Row 5 - Neutral
+      '#ffffff', '#e5e7eb', '#d1d5db', '#f5f0e8', '#fef9ef', '#d1fae5', '#e8e0f0', '#fce7f3',
     ];
 
     const TEXT_COLORS = [
@@ -889,23 +908,15 @@
       { name: 'Serif',       family: 'serif' },
       { name: 'Monospace',   family: 'monospace' },
       { name: 'Cursive',     family: 'cursive' },
-      { name: 'Fantasy',     family: 'fantasy' },
     ];
 
     const GOOGLE_FONTS = [
-      'Inter',
       'Roboto',
-      'Lato',
       'Merriweather',
-      'Playfair Display',
       'Oswald',
-      'Raleway',
-      'Nunito',
       'Poppins',
-      'Bebas Neue',
       'Pacifico',
       'Bangers',
-      'Permanent Marker',
       'Fredoka One',
       'Righteous',
     ];
@@ -1554,25 +1565,33 @@
 
       if (cellEl) {
         const textEl = cellEl.querySelector('.cell-text');
-        if (textEl) {
-          // Extract text, converting <br> back to \n
-          let rawHtml = textEl.innerHTML;
-          rawHtml = rawHtml.replace(/<br\s*\/?>/gi, '\n');
-          // Strip any other HTML tags
-          const tmp = document.createElement('div');
-          tmp.innerHTML = rawHtml;
-          const newText = (tmp.textContent || '').replace(/^[\s\n\r]+|[\s\n\r]+$/g, '');
+        if (!textEl) {
+          // Cannot find text element — exit edit mode without modifying cell data
+          console.log('[Matchvine] confirmEdit: cell-text element not found, skipping data update');
+          const slotIdx = state.editingSlotIndex;
+          exitEditMode();
+          renderBracket(state.bracket);
+          return;
+        }
+        // Extract text, converting <br> back to \n
+        let rawHtml = textEl.innerHTML;
+        console.log('[Matchvine] confirmEdit raw innerHTML:', JSON.stringify(rawHtml));
+        rawHtml = rawHtml.replace(/<br\s*\/?>/gi, '\n');
+        // Strip any other HTML tags
+        const tmp = document.createElement('div');
+        tmp.innerHTML = rawHtml;
+        const newText = (tmp.textContent || '').replace(/^[\s\n\r]+|[\s\n\r]+$/g, '');
+        console.log('[Matchvine] confirmEdit extracted text:', JSON.stringify(newText));
 
-          const bracket = state.bracket;
-          const slot = bracket.slots[state.editingSlotIndex];
-          if (slot && slot.cellId && bracket.cells[slot.cellId]) {
-            if (newText === '') {
-              // Empty text — remove the cell entirely
-              delete bracket.cells[slot.cellId];
-              slot.cellId = null;
-            } else {
-              bracket.cells[slot.cellId].text = newText;
-            }
+        const bracket = state.bracket;
+        const slot = bracket.slots[state.editingSlotIndex];
+        if (slot && slot.cellId && bracket.cells[slot.cellId]) {
+          if (newText === '') {
+            // Empty text — remove the cell entirely
+            delete bracket.cells[slot.cellId];
+            slot.cellId = null;
+          } else {
+            bracket.cells[slot.cellId].text = newText;
           }
         }
       }
@@ -1643,15 +1662,21 @@
         cellEl.classList.add('cell-editing');
         cellEl.classList.remove('cell-empty');
         textEl.contentEditable = 'true';
+        textEl.spellcheck = false;
+        textEl.setAttribute('spellcheck', 'false');
 
         // Add keydown handler directly on the contenteditable element
-        textEl.addEventListener('keydown', function(e) {
+        // Use onkeydown to ensure only one handler (overwrite, not accumulate)
+        textEl.onkeydown = function(e) {
+          console.log('[Matchvine] textEl keydown:', e.key, 'shiftKey:', e.shiftKey);
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             confirmEdit();
+            return false;
           }
-        });
+        };
 
         textEl.focus();
 
@@ -2203,8 +2228,8 @@
     // ── Settings dialog ──
 
     const BACKGROUND_COLORS = [
-      '#ffffff', '#f9fafb', '#f3f4f6', '#e5e7eb',
-      '#fef3c7', '#ecfdf5', '#eff6ff',
+      '#ffffff', '#faf8f5', '#f1f5f9', '#f5f5f4', '#eff6ff',
+      '#f0fdf4', '#fefce8', '#fdf2f8', '#faf5ff', '#fef3c7',
     ];
 
     document.getElementById('btn-settings').addEventListener('click', function() {
