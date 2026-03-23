@@ -386,9 +386,9 @@ export function renderBracket(bracket, options) {
       seedEl.style.top = (pos.y + CELL_HEIGHT / 2 - 7) + 'px';
 
       if (pos.isLeftHalf) {
-        seedEl.style.left = (pos.x - 26) + 'px';
+        seedEl.style.left = (pos.x - 34) + 'px';
       } else {
-        seedEl.style.left = (pos.x + CELL_WIDTH + 6) + 'px';
+        seedEl.style.left = (pos.x + CELL_WIDTH + 14) + 'px';
       }
 
       cellWrapper.appendChild(seedEl);
