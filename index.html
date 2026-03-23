@@ -277,16 +277,31 @@
     /* ── Round Labels ──────────────────────────────────────────────────────── */
     .round-label {
       position: absolute;
-      font-size: 10px;
-      color: #9ca3af;
+      font-size: 14px;
+      color: #6b7280;
       text-align: center;
+      font-weight: 500;
     }
 
     /* ── Seed Number Labels ────────────────────────────────────────────────── */
     .seed-number {
       position: absolute;
-      font-size: 12px;
-      color: #9ca3af;
+      font-size: 14px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    /* ── Bracket Title (on canvas) ────────────────────────────────────────── */
+    .bracket-title-display {
+      position: absolute;
+      text-align: center;
+      font-size: 36px;
+      font-weight: 700;
+      color: #1f2937;
+      cursor: pointer;
+    }
+    .bracket-title-display:hover {
+      color: #3b82f6;
     }
 
     /* ── Color Palette Grid ────────────────────────────────────────────────── */
@@ -814,6 +829,12 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
+      </div>
+
+      <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e7eb; text-align: center;">
+        <a href="https://github.com/ttop/matchvine" target="_blank" style="color: #6b7280; font-size: 12px; text-decoration: none;">
+          🌿 Matchvine on GitHub
+        </a>
       </div>
 
     </div>
@@ -1489,6 +1510,24 @@
 
           cellWrapper.appendChild(seedEl);
         }
+      }
+
+      // -- Bracket title on canvas --
+      if (bracket.title) {
+        const titleEl = document.createElement('div');
+        titleEl.className = 'bracket-title-display';
+        titleEl.textContent = bracket.title;
+        // Center above the champion area
+        const titleWidth = 400;
+        titleEl.style.left = (championX + CHAMP_WIDTH / 2 - titleWidth / 2) + 'px';
+        titleEl.style.width = titleWidth + 'px';
+        titleEl.style.top = '0px';
+        titleEl.addEventListener('click', function() {
+          // Click title to edit it
+          const titleInput = document.getElementById('bracket-title');
+          titleInput.focus();
+        });
+        cellWrapper.appendChild(titleEl);
       }
     }
 
