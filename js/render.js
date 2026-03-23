@@ -252,15 +252,26 @@ export function renderBracket(bracket, options) {
         }
       }
 
-      // Demote button for promoted cells (round > 0)
+      // Demote button only on the MOST ADVANCED cell in a track (not on earlier rounds)
       if (pos.round > 0) {
-        const demoteBtn = document.createElement('div');
-        demoteBtn.className = 'demote-btn';
-        demoteBtn.setAttribute('data-action', 'demote');
-        demoteBtn.setAttribute('data-slot-index', pos.slotIndex);
-        demoteBtn.textContent = '\u00D7'; // ×
-        cellEl.style.overflow = 'visible';
-        cellEl.appendChild(demoteBtn);
+        const nextForDemote = getNextSlot(size, pos.round, pos.indexInRound);
+        let isLastInTrack = true;
+        if (nextForDemote) {
+          const nextIdx = getSlotIndex(size, nextForDemote.round, nextForDemote.index);
+          const nextSl = bracket.slots[nextIdx];
+          if (nextSl && nextSl.cellId === slot.cellId) {
+            isLastInTrack = false; // this cell appears in the next round too
+          }
+        }
+        if (isLastInTrack) {
+          const demoteBtn = document.createElement('div');
+          demoteBtn.className = 'demote-btn';
+          demoteBtn.setAttribute('data-action', 'demote');
+          demoteBtn.setAttribute('data-slot-index', pos.slotIndex);
+          demoteBtn.textContent = '\u00D7'; // ×
+          cellEl.style.overflow = 'visible';
+          cellEl.appendChild(demoteBtn);
+        }
       }
 
       // Draggable for filled cells whose next-round slot is empty

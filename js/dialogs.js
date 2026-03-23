@@ -215,7 +215,7 @@ function populateFontPicker() {
     card.style.fontFamily = font.family;
     if (currentFont === font.family) card.classList.add('selected');
 
-    card.innerHTML = `<div style="font-size:14px;font-weight:600;margin-bottom:4px">${escapeHtml(font.name)}</div><div style="font-size:18px;opacity:0.7">The quick brown fox</div>`;
+    card.innerHTML = `<div style="font-size:20px;font-weight:500">${escapeHtml(font.name)}</div>`;
     grid.appendChild(card);
   });
 
@@ -227,7 +227,7 @@ function populateFontPicker() {
     card.setAttribute('data-font-type', 'google');
     if (currentFont === fontName) card.classList.add('selected');
 
-    card.innerHTML = `<div style="font-size:14px;font-weight:600;margin-bottom:4px">${escapeHtml(fontName)}</div><div class="font-preview" style="font-size:18px;opacity:0.7">The quick brown fox</div>`;
+    card.innerHTML = `<div class="font-preview" style="font-size:20px;font-weight:500">${escapeHtml(fontName)}</div>`;
     grid.appendChild(card);
   });
 
