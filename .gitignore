@@ -24,4 +24,4 @@ Thumbs.db
 .vscode/
 .idea/
 test-results/
-tests/e2e/screenshot.png
+tests/e2e/*.png
