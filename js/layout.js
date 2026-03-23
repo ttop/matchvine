@@ -227,9 +227,9 @@ function layoutStaggered(bracket) {
         // Left semi: just above the bottom feeder (between feeders, closer to center)
         // Right semi: just below the top feeder (between feeders, closer to center)
         if (leftHalf) {
-          y = feederA.y - CELL_HEIGHT; // bottom edge aligns with top feeder's top edge
+          y = feederB.y - CELL_HEIGHT; // bottom edge aligns with bottom feeder's top edge
         } else {
-          y = feederB.y + CELL_HEIGHT; // top edge aligns with bottom feeder's bottom edge
+          y = feederA.y + CELL_HEIGHT; // top edge aligns with top feeder's bottom edge
         }
       } else {
         // Normal rounds: nest centered between feeders
