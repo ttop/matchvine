@@ -20,8 +20,18 @@ let _fullRenderCurrentBracket = null;
 // ── Background colors for settings ──────────────────────────────────────
 
 const BACKGROUND_COLORS = [
-  '#ffffff', '#faf8f5', '#f1f5f9', '#f5f5f4', '#eff6ff',
-  '#f0fdf4', '#fefce8', '#fdf2f8', '#faf5ff', '#fef3c7',
+  '#ffffff',  // White
+  '#f8fafc',  // Cool white
+  '#faf8f5',  // Warm white
+  '#e2e8f0',  // Slate
+  '#d1d5db',  // Gray
+  '#dbeafe',  // Light blue
+  '#d1fae5',  // Mint
+  '#fef3c7',  // Light amber
+  '#fce7f3',  // Light pink
+  '#e9d5ff',  // Light purple
+  '#fecaca',  // Light red
+  '#fed7aa',  // Peach
 ];
 
 // ── Google Fonts ─────────────────────────────────────────────────────────
@@ -205,7 +215,7 @@ function populateFontPicker() {
     card.style.fontFamily = font.family;
     if (currentFont === font.family) card.classList.add('selected');
 
-    card.innerHTML = `<div style="font-size:12px;font-weight:600;margin-bottom:2px">${escapeHtml(font.name)}</div><div style="font-size:10px;opacity:0.7">The quick brown fox</div>`;
+    card.innerHTML = `<div style="font-size:14px;font-weight:600;margin-bottom:4px">${escapeHtml(font.name)}</div><div style="font-size:18px;opacity:0.7">The quick brown fox</div>`;
     grid.appendChild(card);
   });
 
@@ -217,7 +227,7 @@ function populateFontPicker() {
     card.setAttribute('data-font-type', 'google');
     if (currentFont === fontName) card.classList.add('selected');
 
-    card.innerHTML = `<div style="font-size:12px;font-weight:600;margin-bottom:2px">${escapeHtml(fontName)}</div><div class="font-preview" style="font-size:10px;opacity:0.7">The quick brown fox</div>`;
+    card.innerHTML = `<div style="font-size:14px;font-weight:600;margin-bottom:4px">${escapeHtml(fontName)}</div><div class="font-preview" style="font-size:18px;opacity:0.7">The quick brown fox</div>`;
     grid.appendChild(card);
   });
 
