@@ -225,10 +225,12 @@ function layoutStaggered(bracket) {
       const y = gapTop + (gapBottom - gapTop - CELL_HEIGHT) / 2;
 
       let x;
+      const isSemis = round === roundsPerHalf - 1;
+      const nudge = isSemis ? Math.floor(STAGGER_X * 0.35) : 0;
       if (leftHalf) {
-        x = LEFT_PADDING + round * STAGGER_X;
+        x = LEFT_PADDING + round * STAGGER_X - nudge;
       } else {
-        x = rightEdgeX - round * STAGGER_X;
+        x = rightEdgeX - round * STAGGER_X + nudge;
       }
 
       const pos = {

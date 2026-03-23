@@ -6,7 +6,7 @@ import {
   getSlotsInRound, getSlotIndex, getTotalRounds,
   getNextSlot, hasTournamentStarted,
 } from './state.js';
-import { escapeHtml, getAutoTextColor, formatRelativeTime } from './utils.js';
+import { escapeHtml, getAutoTextColor, formatRelativeTime, getRandomColor } from './utils.js';
 import { renderBracket } from './render.js';
 
 // Forward-declared references to storage functions.
@@ -56,14 +56,10 @@ function isSystemFont(fontFamily) {
 export function applyFont(bracket) {
   const font = bracket.titleFont || 'sans-serif';
   const container = document.getElementById('bracket-container');
-  const titleEl = document.getElementById('bracket-title');
-
   if (isSystemFont(font)) {
     container.style.fontFamily = `${font}`;
-    if (titleEl) titleEl.style.fontFamily = `${font}`;
   } else {
     container.style.fontFamily = `"${font}", sans-serif`;
-    if (titleEl) titleEl.style.fontFamily = `"${font}", sans-serif`;
   }
 }
 
@@ -417,10 +413,6 @@ function shuffleFirstRound(bracket) {
   bracket.updatedAt = new Date().toISOString();
 }
 
-// ── Title editing ────────────────────────────────────────────────────────
-
-let titleBeforeEdit = '';
-
 // ── setupDialogEvents ────────────────────────────────────────────────────
 
 /**
@@ -508,7 +500,6 @@ export function setupDialogEvents(storageFns) {
 
     applyBracketStyles(state.bracket);
     renderBracket(state.bracket);
-    document.getElementById('bracket-title').textContent = state.bracket.title;
   });
 
   // ── Background color in settings ──
@@ -661,9 +652,28 @@ export function setupDialogEvents(storageFns) {
 
     const emptySlots = getEmptyFirstRoundSlots(bracket);
 
+    // Collect already-used colors
+    const usedColors = new Set();
+    for (const cellId of Object.keys(bracket.cells)) {
+      if (bracket.cells[cellId].bgColor) usedColors.add(bracket.cells[cellId].bgColor);
+    }
+
     const count = Math.min(names.length, emptySlots.length);
     for (let i = 0; i < count; i++) {
-      const color = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+      // Exclude matchup partner's color
+      const slotData = bracket.slots[emptySlots[i]];
+      const excludeColors = [];
+      if (slotData && slotData.round === 0) {
+        const partnerIdx = slotData.index ^ 1;
+        const partnerSlotIndex = getSlotIndex(bracket.size, 0, partnerIdx);
+        const partnerSlot = bracket.slots[partnerSlotIndex];
+        if (partnerSlot && partnerSlot.cellId && bracket.cells[partnerSlot.cellId]) {
+          excludeColors.push(bracket.cells[partnerSlot.cellId].bgColor);
+        }
+      }
+
+      const color = getRandomColor(usedColors, excludeColors);
+      usedColors.add(color);
       const cell = createCell(names[i], color);
       cell.sourceSlot = emptySlots[i];
       bracket.cells[cell.id] = cell;
@@ -779,34 +789,6 @@ export function setupDialogEvents(storageFns) {
     if (e.key === 'Enter') {
       e.preventDefault();
       createNewBracketFromDialog();
-    }
-  });
-
-  // ── Title editing ──
-  const bracketTitleEl = document.getElementById('bracket-title');
-
-  bracketTitleEl.addEventListener('focus', function() {
-    titleBeforeEdit = this.textContent;
-  });
-
-  bracketTitleEl.addEventListener('blur', function() {
-    const newTitle = this.textContent.trim();
-    if (newTitle && newTitle !== titleBeforeEdit) {
-      state.bracket.title = newTitle;
-      state.bracket.updatedAt = new Date().toISOString();
-    } else if (!newTitle) {
-      this.textContent = titleBeforeEdit;
-    }
-    _saveBracket(state.bracket);
-  });
-
-  bracketTitleEl.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      this.blur();
-    } else if (e.key === 'Escape') {
-      this.textContent = titleBeforeEdit;
-      this.blur();
     }
   });
 

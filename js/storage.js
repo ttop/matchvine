@@ -129,8 +129,6 @@ export function fullRenderCurrentBracket(deps) {
     deps.applyBracketStyles(bracket);
     deps.applyFont(bracket);
     deps.renderBracket(bracket);
-    const titleEl = document.getElementById('bracket-title');
-    if (titleEl) titleEl.textContent = bracket.title;
   }
   if (deps.isGoogleFont(font)) {
     deps.loadGoogleFont(font).then(doRender);

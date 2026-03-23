@@ -50,30 +50,6 @@
       margin-right: 4px;
     }
 
-    #bracket-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: #374151;
-      border: 1px solid transparent;
-      border-radius: 4px;
-      padding: 3px 6px;
-      outline: none;
-      min-width: 120px;
-      max-width: 280px;
-      transition: border-color 0.15s;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    #bracket-title:focus {
-      border-color: #3b82f6;
-    }
-
-    #bracket-title:hover:not(:focus) {
-      border-color: #d1d5db;
-    }
-
     .toolbar-divider {
       width: 1px;
       height: 24px;
@@ -296,9 +272,19 @@
       font-weight: 700;
       color: #1f2937;
       cursor: pointer;
+      outline: none;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      padding: 4px 8px;
+      box-sizing: border-box;
     }
     .bracket-title-display:hover {
       color: #3b82f6;
+    }
+    .bracket-title-display:focus {
+      border-color: #3b82f6;
+      cursor: text;
+      color: #1f2937;
     }
 
     /* ── Color Palette Grid ────────────────────────────────────────────────── */
@@ -725,12 +711,6 @@
   <!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
   <div id="toolbar">
     <span id="app-name">🌿 Matchvine</span>
-    <span
-      id="bracket-title"
-      contenteditable="true"
-      spellcheck="false"
-      data-placeholder="Untitled Bracket"
-    >Untitled Bracket</span>
 
     <div class="toolbar-divider"></div>
 

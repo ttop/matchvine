@@ -25,35 +25,58 @@ export function setOnSave(fn) {
 // ── autoSizeText (private helper) ────────────────────────────────────────
 
 const BASE_FONT = 22;
-const MIN_FONT = 11;
+const MIN_FONT = 10;
 
 /**
  * Shrink font size on a .cell-text element until it fits within the cell.
- * Uses display: block (NOT flex). Only shrinks text longer than 3 chars.
+ * Uses an off-screen measurement span for reliable sizing with display:block.
  */
 export function autoSizeText(cellDiv) {
   const textEl = cellDiv.querySelector('.cell-text');
   if (!textEl) return;
 
-  // Reset to measure at base size
-  textEl.style.fontSize = BASE_FONT + 'px';
-  textEl.style.lineHeight = '1.2';
-  textEl.style.padding = '4px 8px';
-  textEl.style.overflow = 'hidden';
-
-  // Short text always fits at base size
   const text = (textEl.textContent || '').trim();
-  if (text.length <= 3) return;
+  if (text.length <= 3) {
+    textEl.style.fontSize = BASE_FONT + 'px';
+    return;
+  }
 
-  // For longer text, check if it actually overflows
+  const maxW = cellDiv.clientWidth - 16;  // padding
+  const maxH = cellDiv.clientHeight - 8;
+
+  // Create a hidden measurement span
+  const measure = document.createElement('span');
+  measure.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;';
+  measure.textContent = textEl.textContent;
+  document.body.appendChild(measure);
+
   let fontSize = BASE_FONT;
+
+  // Shrink until single-line width fits, then check if wrapping fits height
   while (fontSize > MIN_FONT) {
-    textEl.style.fontSize = fontSize + 'px';
-    if (textEl.scrollHeight <= textEl.clientHeight && textEl.scrollWidth <= textEl.clientWidth) {
+    measure.style.fontSize = fontSize + 'px';
+    measure.style.whiteSpace = 'nowrap';
+    measure.style.width = '';
+    const singleLineWidth = measure.offsetWidth;
+
+    if (singleLineWidth <= maxW) {
+      // Single line fits — use this size
       break;
     }
+
+    // Check if wrapped text fits the height
+    measure.style.whiteSpace = 'normal';
+    measure.style.width = maxW + 'px';
+    measure.style.lineHeight = '1.2';
+    if (measure.offsetHeight <= maxH) {
+      break;
+    }
+
     fontSize--;
   }
+
+  document.body.removeChild(measure);
+  textEl.style.fontSize = fontSize + 'px';
 }
 
 // ── renderBracket ────────────────────────────────────────────────────────
@@ -418,21 +441,52 @@ export function renderBracket(bracket, options) {
     }
   }
 
-  // ── 9. Bracket title display ──
-  if (bracket.title) {
+  // ── 9. Bracket title display (editable in-place) ──
+  {
     const titleEl = document.createElement('div');
     titleEl.className = 'bracket-title-display';
-    titleEl.textContent = bracket.title;
+    titleEl.textContent = bracket.title || 'Untitled Bracket';
+    titleEl.setAttribute('contenteditable', 'true');
+    titleEl.setAttribute('spellcheck', 'false');
     const titleWidth = 400;
     const champSlotPos = posMap[getChampionSlotIndex(size)];
     const champY = champSlotPos ? champSlotPos.y : 0;
     titleEl.style.left = (championX + CHAMP_WIDTH / 2 - titleWidth / 2) + 'px';
     titleEl.style.width = titleWidth + 'px';
     titleEl.style.top = (champY / 2 - 25) + 'px';
-    titleEl.addEventListener('click', function() {
-      const titleInput = document.getElementById('bracket-title');
-      if (titleInput) titleInput.focus();
+
+    let titleBeforeEdit = bracket.title || '';
+
+    titleEl.addEventListener('focus', function() {
+      titleBeforeEdit = this.textContent;
     });
+
+    titleEl.addEventListener('blur', function() {
+      const newTitle = this.textContent.trim();
+      if (newTitle && newTitle !== titleBeforeEdit) {
+        bracket.title = newTitle;
+        bracket.updatedAt = new Date().toISOString();
+        if (_onSaveCallback) _onSaveCallback(bracket);
+      } else if (!newTitle) {
+        this.textContent = titleBeforeEdit;
+      }
+    });
+
+    titleEl.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.blur();
+      } else if (e.key === 'Escape') {
+        this.textContent = titleBeforeEdit;
+        this.blur();
+      }
+    });
+
+    // Prevent click from propagating to bracket container (which could trigger edit-confirm)
+    titleEl.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+
     cellWrapper.appendChild(titleEl);
   }
 
@@ -444,11 +498,6 @@ export function renderBracket(bracket, options) {
     } else {
       shuffleBtn.classList.remove('disabled');
     }
-  }
-
-  const titleInput = document.getElementById('bracket-title');
-  if (titleInput) {
-    titleInput.textContent = bracket.title;
   }
 
   // ── 11. Save bracket ──

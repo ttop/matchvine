@@ -1,3 +1,30 @@
+import { COLOR_PALETTE } from './constants.js';
+
+/**
+ * Pick a random color from COLOR_PALETTE, preferring unused colors.
+ * @param {Set} usedColors - Colors already used in the bracket
+ * @param {Array} excludeColors - Colors to never pick (e.g., matchup partner's color)
+ * @returns {string} A hex color from COLOR_PALETTE
+ */
+export function getRandomColor(usedColors = new Set(), excludeColors = []) {
+  const excludeSet = new Set(excludeColors);
+
+  // First try: not used AND not excluded
+  let candidates = COLOR_PALETTE.filter(c => !usedColors.has(c) && !excludeSet.has(c));
+
+  // Fallback: allow used, but still exclude partner colors
+  if (candidates.length === 0) {
+    candidates = COLOR_PALETTE.filter(c => !excludeSet.has(c));
+  }
+
+  // Ultimate fallback: any color
+  if (candidates.length === 0) {
+    candidates = COLOR_PALETTE;
+  }
+
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
 /** WCAG 2.1 relative luminance for a hex colour string. */
 export function getLuminance(hexColor) {
   if (!hexColor || !/^#[0-9a-fA-F]{6}$/.test(hexColor)) return 0;

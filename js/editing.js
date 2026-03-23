@@ -1,7 +1,7 @@
-import { COLOR_PALETTE } from './constants.js';
-import { state, createCell } from './state.js';
+import { state, createCell, getSlotIndex, getMatchupPair } from './state.js';
 import { renderBracket } from './render.js';
 import { autoSizeText } from './render.js';
+import { getRandomColor } from './utils.js';
 
 // ── Editing state ────────────────────────────────────────────────────────
 
@@ -95,7 +95,24 @@ export function enterEditMode(slotIndex) {
   // If empty slot, create a cell in the data model but DON'T re-render.
   // Instead, modify the existing DOM cell directly.
   if (wasEmpty) {
-    const color = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+    // Collect used colors across the bracket
+    const usedColors = new Set();
+    for (const cellId of Object.keys(bracket.cells)) {
+      if (bracket.cells[cellId].bgColor) usedColors.add(bracket.cells[cellId].bgColor);
+    }
+
+    // Exclude the matchup partner's color (round-0 pairs: i ^ 1)
+    const excludeColors = [];
+    if (slot.round === 0) {
+      const partnerIdx = slot.index ^ 1;
+      const partnerSlotIndex = getSlotIndex(bracket.size, 0, partnerIdx);
+      const partnerSlot = bracket.slots[partnerSlotIndex];
+      if (partnerSlot && partnerSlot.cellId && bracket.cells[partnerSlot.cellId]) {
+        excludeColors.push(bracket.cells[partnerSlot.cellId].bgColor);
+      }
+    }
+
+    const color = getRandomColor(usedColors, excludeColors);
     const newCell = createCell('', color);
     bracket.cells[newCell.id] = newCell;
     slot.cellId = newCell.id;
