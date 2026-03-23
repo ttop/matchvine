@@ -1,6 +1,8 @@
 name: Deploy Preview Branch
 
 on:
+  push:
+    branches: ['never-match']
   workflow_dispatch:
     inputs:
       branch:
