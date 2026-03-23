@@ -223,17 +223,13 @@ function layoutStaggered(bracket) {
 
       let y;
       if (isSemis) {
-        // Semis: push toward center vertically instead of centering between feeders.
-        // Left-half semis: top semi aligns with its bottom feeder (pushed down)
-        //                  bottom semi aligns with its top feeder (pushed up)
-        // This lets the semis nestle close to the champion.
-        const isTopHalfOfSide = idx < getSlotsInRound(size, round) / (leftHalf ? 2 : 2);
-        // For the left half there's only 1 semis cell; for right half only 1.
-        // Each half has exactly 1 semi. Left semi pushed down, right semi pushed up.
+        // Semis nestle close to the champion, between their feeders and center.
+        // Left semi: above feederA (top feeder), closer to center than round 3
+        // Right semi: below feederB (bottom feeder), closer to center than round 3
         if (leftHalf) {
-          y = feederB.y + CELL_HEIGHT + NEST_GAP / 2; // below bottom feeder
+          y = feederA.y - CELL_HEIGHT - NEST_GAP / 2; // above top feeder, toward center
         } else {
-          y = feederA.y - CELL_HEIGHT - NEST_GAP / 2; // above top feeder
+          y = feederB.y + CELL_HEIGHT + NEST_GAP / 2; // below bottom feeder, toward center
         }
       } else {
         // Normal rounds: nest centered between feeders
