@@ -1514,17 +1514,20 @@
       if (!textEl) return;
 
       const BASE_FONT = 22;
-      const MIN_FONT  = 9;
-      const PAD       = 8; // horizontal/vertical padding allowance
+      const MIN_FONT  = 11;
+      const maxW = cellDiv.clientWidth - 16; // horizontal padding
+      const maxH = cellDiv.clientHeight - 8; // vertical padding
 
       let fontSize = BASE_FONT;
       textEl.style.fontSize = fontSize + 'px';
+      textEl.style.lineHeight = '1.2';
+
+      // Only shrink if text content is long enough to warrant it
+      const text = textEl.textContent || '';
+      if (text.length <= 2) return; // single chars like "?" always fit at base size
 
       while (fontSize > MIN_FONT) {
-        if (
-          textEl.scrollHeight <= cellDiv.clientHeight - PAD &&
-          textEl.scrollWidth  <= cellDiv.clientWidth  - PAD
-        ) {
+        if (textEl.scrollHeight <= maxH && textEl.scrollWidth <= maxW) {
           break;
         }
         fontSize--;
@@ -3258,11 +3261,7 @@
       }
 
       if (!bracket) {
-        // No saved brackets — show the creation dialog instead of silently creating
-        // Create a temporary default bracket so the UI has something to render
-        bracket = createBracket(16, 'New Bracket');
-        state.bracket = bracket;
-        fullRenderCurrentBracket();
+        // No saved brackets — show the creation dialog, don't render yet
         openNewBracketDialog();
         return;
       }
