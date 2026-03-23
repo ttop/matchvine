@@ -253,10 +253,30 @@
       display: none;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
       cursor: pointer;
       z-index: 5;
-      padding-bottom: 3px;
+      padding-bottom: 2px;
+    }
+
+    .format-icon-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 8px);
+      grid-template-rows: repeat(2, 6px);
+      gap: 2px;
+    }
+
+    .format-icon-swatch {
+      border-radius: 1px;
+    }
+
+    /* Invisible hover zone below cell to trigger format-icon */
+    .cell::after {
+      content: '';
+      position: absolute;
+      bottom: -26px;
+      left: 0;
+      right: 0;
+      height: 26px;
     }
 
     .cell:hover .format-icon {
