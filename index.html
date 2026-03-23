@@ -541,7 +541,8 @@
 
     .settings-toggle-row-inline {
       display: flex;
-      gap: 24px;
+      flex-wrap: wrap;
+      gap: 10px 24px;
     }
 
     .settings-toggle-row-inline .settings-toggle-row {
@@ -880,17 +881,15 @@
               <input type="checkbox" id="toggle-seed-numbers">
               <span class="toggle-slider"></span>
             </label>
-            <label class="toggle-label" for="toggle-seed-numbers">Show seed numbers</label>
+            <label class="toggle-label" for="toggle-seed-numbers">Seed numbers</label>
           </div>
           <div class="settings-toggle-row">
             <label class="toggle-switch">
               <input type="checkbox" id="toggle-auto-color">
               <span class="toggle-slider"></span>
             </label>
-            <label class="toggle-label" for="toggle-auto-color">Auto-color new cells</label>
+            <label class="toggle-label" for="toggle-auto-color">Auto-color cells</label>
           </div>
-        </div>
-        <div class="settings-toggle-row-inline" style="margin-top: 10px;">
           <div class="settings-toggle-row">
             <span class="toggle-label">Layout</span>
             <div class="layout-toggles" id="layout-toggles">
@@ -973,17 +972,15 @@
               <input type="checkbox" id="new-bracket-toggle-seed-numbers" checked>
               <span class="toggle-slider"></span>
             </label>
-            <label class="toggle-label" for="new-bracket-toggle-seed-numbers">Show seed numbers</label>
+            <label class="toggle-label" for="new-bracket-toggle-seed-numbers">Seed numbers</label>
           </div>
           <div class="settings-toggle-row">
             <label class="toggle-switch">
               <input type="checkbox" id="new-bracket-toggle-auto-color" checked>
               <span class="toggle-slider"></span>
             </label>
-            <label class="toggle-label" for="new-bracket-toggle-auto-color">Auto-color new cells</label>
+            <label class="toggle-label" for="new-bracket-toggle-auto-color">Auto-color cells</label>
           </div>
-        </div>
-        <div class="settings-toggle-row-inline" style="margin-top: 10px;">
           <div class="settings-toggle-row">
             <span class="toggle-label">Layout</span>
             <div class="layout-toggles" id="new-bracket-layout-toggles">
