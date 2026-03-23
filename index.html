@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Matchvine — Tournament Bracket Maker</title>
+  <title>Matchvine - Bracket Maker</title>
   <style>
     /* ── Reset / Base ──────────────────────────────────────────────────────── */
     * {
@@ -151,9 +151,9 @@
       text-align: center;
       outline: none;
       word-break: break-word;
-      padding: 4px 8px;
+      padding: 2px 8px 6px;
       box-sizing: border-box;
-      line-height: 1.2;
+      line-height: 1.35;
       overflow: hidden;
     }
 
@@ -321,6 +321,10 @@
       overflow: hidden;
     }
 
+    #settings-dialog {
+      max-width: 560px;
+    }
+
     .dialog-header {
       display: flex;
       align-items: center;
@@ -465,7 +469,7 @@
     }
 
     .font-option {
-      padding: 8px 6px;
+      padding: 12px 8px;
       border: 1px solid #d1d5db;
       border-radius: 8px;
       font-size: 13px;
@@ -474,6 +478,13 @@
       text-align: center;
       color: #374151;
       transition: border-color 0.1s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .font-option:hover {

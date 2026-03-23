@@ -495,7 +495,7 @@ export function renderBracket(bracket, options) {
     const champY = champSlotPos ? champSlotPos.y : 0;
     titleEl.style.left = (championX + CHAMP_WIDTH / 2 - titleWidth / 2) + 'px';
     titleEl.style.width = titleWidth + 'px';
-    titleEl.style.top = (champY / 4 - 10) + 'px';
+    titleEl.style.top = '10px';
 
     let titleBeforeEdit = bracket.title || '';
 
