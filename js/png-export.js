@@ -18,15 +18,19 @@ function renderBracketToCanvas(bracket) {
   const halfSize = size / 2;
   const roundsPerHalf = Math.log2(halfSize) + 1;
 
+  const SCALE = 2;
   const PADDING = 40;
   const TITLE_HEIGHT = 50;
   const canvasWidth = totalWidth + PADDING * 2;
   const canvasHeight = totalHeight + PADDING * 2 + TITLE_HEIGHT;
 
   const canvas = document.createElement('canvas');
-  canvas.width = canvasWidth;
-  canvas.height = canvasHeight;
+  canvas.width = canvasWidth * SCALE;
+  canvas.height = canvasHeight * SCALE;
+  canvas.style.width = canvasWidth + 'px';
+  canvas.style.height = canvasHeight + 'px';
   const ctx = canvas.getContext('2d');
+  ctx.scale(SCALE, SCALE);
 
   // Background
   ctx.fillStyle = bracket.backgroundColor || '#ffffff';
@@ -40,7 +44,7 @@ function renderBracketToCanvas(bracket) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#111827';
-  ctx.font = `600 22px "${fontFamily}", sans-serif`;
+  ctx.font = `600 36px "${fontFamily}", sans-serif`;
   ctx.fillText(bracket.title || 'Untitled Bracket', canvasWidth / 2, PADDING + TITLE_HEIGHT / 2 - 5);
 
   // Collect promoted cell IDs for winner/loser styling
@@ -69,9 +73,19 @@ function renderBracketToCanvas(bracket) {
     ctx.closePath();
   }
 
+  // Helper: draw a line segment on the canvas
+  function drawLine(x1, y1, x2, y2) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
   // Draw connector lines
   ctx.strokeStyle = '#9ca3af';
   ctx.lineWidth = 1.5;
+
+  const isStaggered = bracket.layoutMode === 'staggered';
 
   for (const pos of positions) {
     if (pos.round === 0) continue;
@@ -86,25 +100,64 @@ function renderBracketToCanvas(bracket) {
     const feederAMidY = oy + feederA.y + CELL_HEIGHT / 2;
     const feederBMidY = oy + feederB.y + CELL_HEIGHT / 2;
 
-    ctx.beginPath();
-    if (pos.isChampion) {
+    if (isStaggered && !pos.isChampion) {
+      // Staggered lines: horizontal from feeder edge to winner midX, then vertical to winner edge
+      const winnerMidX = ox + pos.x + CELL_WIDTH / 2;
+
+      if (pos.isLeftHalf) {
+        // Top feeder: horizontal right to winnerMidX, then vertical down to winner top
+        drawLine(ox + feederA.x + CELL_WIDTH, feederAMidY, winnerMidX, feederAMidY);
+        drawLine(winnerMidX, feederAMidY, winnerMidX, oy + pos.y);
+        // Bottom feeder: horizontal right to winnerMidX, then vertical up to winner bottom
+        drawLine(ox + feederB.x + CELL_WIDTH, feederBMidY, winnerMidX, feederBMidY);
+        drawLine(winnerMidX, feederBMidY, winnerMidX, oy + pos.y + CELL_HEIGHT);
+      } else {
+        // Right half: horizontal left to winnerMidX, then vertical
+        drawLine(ox + feederA.x, feederAMidY, winnerMidX, feederAMidY);
+        drawLine(winnerMidX, feederAMidY, winnerMidX, oy + pos.y);
+        drawLine(ox + feederB.x, feederBMidY, winnerMidX, feederBMidY);
+        drawLine(winnerMidX, feederBMidY, winnerMidX, oy + pos.y + CELL_HEIGHT);
+      }
+
+    } else if (pos.isChampion) {
       const leftFeeder = feederA.isLeftHalf ? feederA : feederB;
       const rightFeeder = feederA.isLeftHalf ? feederB : feederA;
-      const ljx = ox + leftFeeder.x + CELL_WIDTH + (pos.x - (leftFeeder.x + CELL_WIDTH)) / 2;
-      const leftMidY = oy + leftFeeder.y + CELL_HEIGHT / 2;
-      ctx.moveTo(ox + leftFeeder.x + CELL_WIDTH, leftMidY);
-      ctx.lineTo(ljx, leftMidY);
-      ctx.lineTo(ljx, midY);
-      ctx.lineTo(ox + pos.x, midY);
+      const champMidX = ox + pos.x + CHAMP_WIDTH / 2;
 
-      const rjx = ox + rightFeeder.x - (rightFeeder.x - (pos.x + CHAMP_WIDTH)) / 2;
-      const rightMidY = oy + rightFeeder.y + CELL_HEIGHT / 2;
-      ctx.moveTo(ox + rightFeeder.x, rightMidY);
-      ctx.lineTo(rjx, rightMidY);
-      ctx.lineTo(rjx, midY);
-      ctx.lineTo(ox + pos.x + CHAMP_WIDTH, midY);
+      if (isStaggered) {
+        // Staggered: lines from semis go horizontal then vertical to champion's top/bottom at its horizontal midpoint
+        const leftMidY = oy + leftFeeder.y + CELL_HEIGHT / 2;
+        const rightMidY = oy + rightFeeder.y + CELL_HEIGHT / 2;
+        // Left semi -> champion top edge at midpoint
+        drawLine(ox + leftFeeder.x + CELL_WIDTH, leftMidY, champMidX, leftMidY);
+        drawLine(champMidX, leftMidY, champMidX, oy + pos.y);
+        // Right semi -> champion bottom edge at midpoint
+        drawLine(ox + rightFeeder.x, rightMidY, champMidX, rightMidY);
+        drawLine(champMidX, rightMidY, champMidX, oy + pos.y + CELL_HEIGHT);
+      } else {
+        // Classic: horizontal bracket lines to champion left/right edges
+        const ljx = ox + leftFeeder.x + CELL_WIDTH + (pos.x - (leftFeeder.x + CELL_WIDTH)) / 2;
+        const leftMidY = oy + leftFeeder.y + CELL_HEIGHT / 2;
+        ctx.beginPath();
+        ctx.moveTo(ox + leftFeeder.x + CELL_WIDTH, leftMidY);
+        ctx.lineTo(ljx, leftMidY);
+        ctx.lineTo(ljx, midY);
+        ctx.lineTo(ox + pos.x, midY);
+        ctx.stroke();
+
+        const rjx = ox + rightFeeder.x - (rightFeeder.x - (pos.x + CHAMP_WIDTH)) / 2;
+        const rightMidY = oy + rightFeeder.y + CELL_HEIGHT / 2;
+        ctx.beginPath();
+        ctx.moveTo(ox + rightFeeder.x, rightMidY);
+        ctx.lineTo(rjx, rightMidY);
+        ctx.lineTo(rjx, midY);
+        ctx.lineTo(ox + pos.x + CHAMP_WIDTH, midY);
+        ctx.stroke();
+      }
+
     } else if (pos.isLeftHalf) {
       const jx = ox + feederA.x + CELL_WIDTH + (pos.x - (feederA.x + CELL_WIDTH)) / 2;
+      ctx.beginPath();
       ctx.moveTo(ox + feederA.x + CELL_WIDTH, feederAMidY);
       ctx.lineTo(jx, feederAMidY);
       ctx.moveTo(ox + feederB.x + CELL_WIDTH, feederBMidY);
@@ -113,8 +166,11 @@ function renderBracketToCanvas(bracket) {
       ctx.lineTo(jx, feederBMidY);
       ctx.moveTo(jx, midY);
       ctx.lineTo(ox + pos.x, midY);
+      ctx.stroke();
+
     } else {
       const jx = ox + feederA.x - (feederA.x - (pos.x + CELL_WIDTH)) / 2;
+      ctx.beginPath();
       ctx.moveTo(ox + feederA.x, feederAMidY);
       ctx.lineTo(jx, feederAMidY);
       ctx.moveTo(ox + feederB.x, feederBMidY);
@@ -123,8 +179,8 @@ function renderBracketToCanvas(bracket) {
       ctx.lineTo(jx, feederBMidY);
       ctx.moveTo(jx, midY);
       ctx.lineTo(ox + pos.x + CELL_WIDTH, midY);
+      ctx.stroke();
     }
-    ctx.stroke();
   }
 
   // Draw cells
@@ -180,7 +236,8 @@ function renderBracketToCanvas(bracket) {
 
     // Draw text
     ctx.fillStyle = textColor;
-    const displayText = isChamp && text ? '\u{1F3C6} ' + text : (isChamp ? '\u{1F3C6}' : text);
+    const isFilled = slot && slot.cellId && bracket.cells[slot.cellId];
+    const displayText = isChamp && isFilled && text ? '\u{1F3C6} ' + text : (isChamp ? '\u{1F3C6}' : text);
     let fontSize = 14;
     ctx.font = `500 ${fontSize}px "${fontFamily}", sans-serif`;
     while (fontSize > 9 && ctx.measureText(displayText).width > cellWidth - 16) {
@@ -194,30 +251,34 @@ function renderBracketToCanvas(bracket) {
     ctx.globalAlpha = 1;
   }
 
-  // Round labels
+  // Round labels — use same getHalfRoundLabel as render.js
+  function getHalfRoundLabel(round, roundsInHalf) {
+    if (round === roundsInHalf - 1) return 'Finals';
+    if (round === roundsInHalf - 2) return 'Semifinals';
+    if (round === roundsInHalf - 3) return 'Quarterfinals';
+    return 'Round ' + (round + 1);
+  }
+
   const labelY = oy + totalHeight - 30;
   ctx.fillStyle = '#9ca3af';
   ctx.font = '10px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  function getHalfRoundLabel(round, roundsInHalf) {
-    if (round === roundsInHalf - 1) return 'Semis';
-    return 'Round ' + (round + 1);
-  }
-
+  // Position labels based on actual cell positions (works for both classic and staggered)
   for (let r = 0; r < roundsPerHalf; r++) {
-    const x = ox + LEFT_PADDING + r * (CELL_WIDTH + ROUND_GAP) + CELL_WIDTH / 2;
-    ctx.fillText(getHalfRoundLabel(r, roundsPerHalf), x, labelY);
+    const leftCell = positions.find(p => p.round === r && p.isLeftHalf);
+    if (leftCell) {
+      ctx.fillText(getHalfRoundLabel(r, roundsPerHalf), ox + leftCell.x + CELL_WIDTH / 2, labelY);
+    }
+
+    const rightCell = positions.find(p => p.round === r && !p.isLeftHalf && !p.isChampion);
+    if (rightCell) {
+      ctx.fillText(getHalfRoundLabel(r, roundsPerHalf), ox + rightCell.x + CELL_WIDTH / 2, labelY);
+    }
   }
   // Champion label
-  ctx.fillText('Final', ox + layout.championX + CHAMP_WIDTH / 2, labelY);
-  // Right labels
-  const rightEdgeX = totalWidth - CELL_WIDTH - RIGHT_PADDING;
-  for (let r = 0; r < roundsPerHalf; r++) {
-    const x = ox + rightEdgeX - r * (CELL_WIDTH + ROUND_GAP) + CELL_WIDTH / 2;
-    ctx.fillText(getHalfRoundLabel(r, roundsPerHalf), x, labelY);
-  }
+  ctx.fillText('Champion', ox + layout.championX + CHAMP_WIDTH / 2, labelY);
 
   // Seed numbers
   if (bracket.showSeedNumbers) {
