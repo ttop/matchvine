@@ -170,11 +170,8 @@
     }
 
     .cell-text {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: block;
       width: 100%;
-      height: 100%;
       text-align: center;
       outline: none;
       word-break: break-word;
@@ -1552,11 +1549,6 @@
       textEl.style.lineHeight = '1.2';
       textEl.style.padding = '4px 8px';
       textEl.style.overflow = 'hidden';
-      textEl.style.display = 'flex';
-      textEl.style.alignItems = 'center';
-      textEl.style.justifyContent = 'center';
-      textEl.style.height = '100%';
-      textEl.style.boxSizing = 'border-box';
 
       // Short text always fits at base size
       const text = (textEl.textContent || '').trim();
@@ -1746,18 +1738,6 @@
           cellEl.innerHTML = '';
           const textEl = document.createElement('span');
           textEl.className = 'cell-text';
-          textEl.style.display = 'flex';
-          textEl.style.alignItems = 'center';
-          textEl.style.justifyContent = 'center';
-          textEl.style.width = '100%';
-          textEl.style.height = '100%';
-          textEl.style.textAlign = 'center';
-          textEl.style.outline = 'none';
-          textEl.style.wordBreak = 'break-word';
-          textEl.style.padding = '4px 8px';
-          textEl.style.boxSizing = 'border-box';
-          textEl.style.lineHeight = '1.2';
-          textEl.style.overflow = 'hidden';
           textEl.innerHTML = existingHtml;
           cellEl.appendChild(textEl);
         }
