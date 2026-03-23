@@ -143,6 +143,7 @@ export function renderBracket(bracket, options) {
   svg.style.left = '0';
   svg.style.top = '0';
   svg.style.pointerEvents = 'none';
+  svg.style.zIndex = '0';
   bracketInner.appendChild(svg);
 
   // ── 3. Cell wrapper ──
@@ -150,6 +151,7 @@ export function renderBracket(bracket, options) {
   cellWrapper.style.position = 'absolute';
   cellWrapper.style.left = '0';
   cellWrapper.style.top = '0';
+  cellWrapper.style.zIndex = '1';
   cellWrapper.style.width = totalWidth + 'px';
   cellWrapper.style.height = totalHeight + 'px';
   bracketInner.appendChild(cellWrapper);
