@@ -263,9 +263,14 @@ export function renderBracket(bracket, options) {
         cellEl.appendChild(demoteBtn);
       }
 
-      // Draggable for first-round filled cells (pre-tournament)
-      if (pos.round === 0 && !tournamentStarted) {
-        cellEl.setAttribute('draggable', 'true');
+      // Draggable for first-round filled cells whose matchup hasn't advanced yet
+      if (pos.round === 0) {
+        const next = getNextSlot(size, 0, pos.indexInRound);
+        const nextSlotIdx = next ? getSlotIndex(size, next.round, next.index) : -1;
+        const nextSlot = nextSlotIdx >= 0 ? bracket.slots[nextSlotIdx] : null;
+        if (!nextSlot || !nextSlot.cellId) {
+          cellEl.setAttribute('draggable', 'true');
+        }
       }
 
     } else {
