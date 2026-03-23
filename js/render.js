@@ -10,6 +10,18 @@ import {
 } from './state.js';
 import { escapeHtml } from './utils.js';
 
+// ── Module-level save callback ───────────────────────────────────────────
+
+let _onSaveCallback = null;
+
+/**
+ * Register a callback that runs after every renderBracket call.
+ * Called by main.js during initialization to wire in saveBracket.
+ */
+export function setOnSave(fn) {
+  _onSaveCallback = fn;
+}
+
 // ── autoSizeText (private helper) ────────────────────────────────────────
 
 const BASE_FONT = 22;
@@ -419,5 +431,7 @@ export function renderBracket(bracket, options) {
   // ── 11. Save bracket ──
   if (opts.onSave) {
     opts.onSave(bracket);
+  } else if (_onSaveCallback) {
+    _onSaveCallback(bracket);
   }
 }

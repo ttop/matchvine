@@ -180,6 +180,14 @@ export function openSettingsDialog() {
   // Seed numbers toggle
   document.getElementById('toggle-seed-numbers').checked = bracket.showSeedNumbers;
 
+  // Layout toggles
+  const layoutToggles = document.getElementById('layout-toggles');
+  if (layoutToggles) {
+    layoutToggles.querySelectorAll('.size-toggle').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-layout') === (bracket.layoutMode || 'full'));
+    });
+  }
+
   // Font picker
   populateFontPicker();
 
@@ -524,6 +532,23 @@ export function setupDialogEvents(storageFns) {
     state.bracket.updatedAt = new Date().toISOString();
     renderBracket(state.bracket);
   });
+
+  // ── Layout toggle ──
+  const layoutTogglesEl = document.getElementById('layout-toggles');
+  if (layoutTogglesEl) {
+    layoutTogglesEl.addEventListener('click', function(e) {
+      const btn = e.target.closest('.size-toggle');
+      if (!btn) return;
+      const mode = btn.getAttribute('data-layout');
+      if (mode === state.bracket.layoutMode) return;
+      state.bracket.layoutMode = mode;
+      state.bracket.updatedAt = new Date().toISOString();
+      this.querySelectorAll('.size-toggle').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-layout') === mode);
+      });
+      renderBracket(state.bracket);
+    });
+  }
 
   // ── Font picker ──
   document.getElementById('font-picker-grid').addEventListener('click', function(e) {
