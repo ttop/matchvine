@@ -708,8 +708,14 @@
       /* inherits .color-grid styles when class is added */
     }
 
-    #settings-bg-color-grid {
-      grid-template-columns: repeat(5, 1fr);
+    #settings-bg-color-grid,
+    #new-bracket-bg-color-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    #settings-bg-color-grid .color-swatch,
+    #new-bracket-bg-color-grid .color-swatch {
+      aspect-ratio: 3 / 1;
     }
 
     /* auto-contrast — always auto-calculated */
@@ -850,7 +856,7 @@
 
       <div class="settings-section">
         <div class="settings-section-label">Background Color</div>
-        <div class="color-grid" id="settings-bg-color-grid" style="grid-template-columns: repeat(4, 1fr)">
+        <div class="color-grid" id="settings-bg-color-grid" >
           <!-- color swatches injected by JS -->
         </div>
       </div>
@@ -940,7 +946,7 @@
 
       <div class="settings-section">
         <div class="settings-section-label">Background Color</div>
-        <div class="color-grid" id="new-bracket-bg-color-grid" style="grid-template-columns: repeat(4, 1fr)">
+        <div class="color-grid" id="new-bracket-bg-color-grid" >
           <!-- color swatches injected by JS -->
         </div>
       </div>
