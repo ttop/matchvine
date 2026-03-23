@@ -153,8 +153,8 @@ function layoutStaggered(bracket) {
   //   c.y + CELL_HEIGHT + NEST_GAP <= b.y
   // So the spacing between a and b is: 2 * CELL_HEIGHT + 2 * NEST_GAP
   // But pairs also need spacing between them (between b of one pair and a of next pair).
-  const NEST_GAP = CELL_HEIGHT + 16;  // enough vertical space between feeders for the winner cell to nest
-  const PAIR_GAP = 24; // vertical gap between pairs
+  const NEST_GAP = CELL_HEIGHT + 28;  // vertical space between feeders — room for winner cell + breathing room
+  const PAIR_GAP = 32; // vertical gap between pairs
 
   // Calculate round-0 y positions for left half.
   // Each pair of cells takes: CELL_HEIGHT + NEST_GAP + CELL_HEIGHT = 2*CH + NG
@@ -165,8 +165,8 @@ function layoutStaggered(bracket) {
   const round0Height = numPairs * pairHeight + (numPairs - 1) * PAIR_GAP;
   const totalHeight = round0Height + TOP_PADDING * 2 + LABEL_MARGIN;
 
-  // Horizontal offset: ~60% of cell width so winner nestles between feeders
-  const STAGGER_X = Math.floor(CELL_WIDTH * 0.6);
+  // Horizontal offset: ~75% of cell width — nestled but not too tight
+  const STAGGER_X = Math.floor(CELL_WIDTH * 0.75);
 
   // Total width for one half: round 0 starts at left, each subsequent round shifts right by STAGGER_X
   const halfWidth = CELL_WIDTH + (roundsPerHalf - 1) * STAGGER_X;

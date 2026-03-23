@@ -358,16 +358,31 @@ export function renderBracket(bracket, options) {
     return 'Round ' + (round + 1);
   }
 
-  // Left half labels
+  // Position labels based on actual cell x positions (works for both classic and staggered)
   for (let r = 0; r < roundsPerHalf; r++) {
-    const labelEl = document.createElement('div');
-    labelEl.className = 'round-label';
-    const x = LEFT_PADDING + r * (CELL_WIDTH + ROUND_GAP);
-    labelEl.style.left = x + 'px';
-    labelEl.style.top = labelY + 'px';
-    labelEl.style.width = CELL_WIDTH + 'px';
-    labelEl.textContent = getHalfRoundLabel(r, roundsPerHalf);
-    cellWrapper.appendChild(labelEl);
+    // Find the first left-half cell in this round to get the x position
+    const leftCell = positions.find(p => p.round === r && p.isLeftHalf);
+    if (leftCell) {
+      const labelEl = document.createElement('div');
+      labelEl.className = 'round-label';
+      labelEl.style.left = leftCell.x + 'px';
+      labelEl.style.top = labelY + 'px';
+      labelEl.style.width = CELL_WIDTH + 'px';
+      labelEl.textContent = getHalfRoundLabel(r, roundsPerHalf);
+      cellWrapper.appendChild(labelEl);
+    }
+
+    // Find the first right-half cell in this round
+    const rightCell = positions.find(p => p.round === r && !p.isLeftHalf && !p.isChampion);
+    if (rightCell) {
+      const labelEl = document.createElement('div');
+      labelEl.className = 'round-label';
+      labelEl.style.left = rightCell.x + 'px';
+      labelEl.style.top = labelY + 'px';
+      labelEl.style.width = CELL_WIDTH + 'px';
+      labelEl.textContent = getHalfRoundLabel(r, roundsPerHalf);
+      cellWrapper.appendChild(labelEl);
+    }
   }
 
   // Champion label
@@ -378,19 +393,6 @@ export function renderBracket(bracket, options) {
     labelEl.style.top = labelY + 'px';
     labelEl.style.width = CHAMP_WIDTH + 'px';
     labelEl.textContent = 'Final';
-    cellWrapper.appendChild(labelEl);
-  }
-
-  // Right half labels (mirrored)
-  const rightEdgeX = totalWidth - CELL_WIDTH - RIGHT_PADDING;
-  for (let r = 0; r < roundsPerHalf; r++) {
-    const labelEl = document.createElement('div');
-    labelEl.className = 'round-label';
-    const x = rightEdgeX - r * (CELL_WIDTH + ROUND_GAP);
-    labelEl.style.left = x + 'px';
-    labelEl.style.top = labelY + 'px';
-    labelEl.style.width = CELL_WIDTH + 'px';
-    labelEl.textContent = getHalfRoundLabel(r, roundsPerHalf);
     cellWrapper.appendChild(labelEl);
   }
 
