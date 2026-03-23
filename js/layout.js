@@ -170,7 +170,7 @@ function layoutStaggered(bracket) {
 
   // Total width for one half: round 0 starts at left, each subsequent round shifts right by STAGGER_X
   const halfWidth = CELL_WIDTH + (roundsPerHalf - 1) * STAGGER_X;
-  const CENTER_GAP = ROUND_GAP;
+  const CENTER_GAP = 20; // narrow gap so semis and champion nestle together
   const totalWidth = LEFT_PADDING + halfWidth + CENTER_GAP + CHAMP_WIDTH + CENTER_GAP + halfWidth + RIGHT_PADDING;
 
   // --- Round 0: LEFT half ---
@@ -226,16 +226,15 @@ function layoutStaggered(bracket) {
         // Semis stay between their two Round 3 feeders, but shifted toward champion.
         // Left semi: just above the bottom feeder (between feeders, closer to center)
         // Right semi: just below the top feeder (between feeders, closer to center)
+        const SEMI_NUDGE = CELL_HEIGHT * 0.6; // nudge back toward center slightly
         if (leftHalf) {
-          // Align bottom edge with the top edge of feederB's top sub-feeder
           const subFeeders = getMatchupPair(size, feederB.round, feederB.indexInRound);
           const subTop = subFeeders ? posMap[subFeeders[0]] : feederB;
-          y = subTop.y - CELL_HEIGHT;
+          y = subTop.y - CELL_HEIGHT + SEMI_NUDGE;
         } else {
-          // Align top edge with the bottom edge of feederA's bottom sub-feeder
           const subFeeders = getMatchupPair(size, feederA.round, feederA.indexInRound);
           const subBottom = subFeeders ? posMap[subFeeders[1]] : feederA;
-          y = subBottom.y + CELL_HEIGHT;
+          y = subBottom.y + CELL_HEIGHT - SEMI_NUDGE;
         }
       } else {
         // Normal rounds: nest centered between feeders
