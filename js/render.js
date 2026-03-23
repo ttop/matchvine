@@ -220,6 +220,11 @@ export function renderBracket(bracket, options) {
       const formatIcon = document.createElement('span');
       formatIcon.className = 'format-icon';
       formatIcon.textContent = '\u{1F3A8}';
+      // On right-half cells, put format icon on the right to avoid overlapping promote button
+      if (!pos.isLeftHalf && !pos.isChampion) {
+        formatIcon.style.left = 'auto';
+        formatIcon.style.right = '4px';
+      }
       cellEl.appendChild(formatIcon);
 
       // Promote button
