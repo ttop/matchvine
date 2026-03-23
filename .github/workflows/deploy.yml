@@ -2,7 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
+  delete:
 
 permissions:
   contents: read
@@ -20,7 +21,131 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+
+      - name: Assemble site from main
+        run: |
+          mkdir -p site
+          cp -r main/* site/
+          rm -rf site/.git site/.github
+
+      - name: Find recent preview branches
+        id: branches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branches = await github.rest.repos.listBranches({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            const infos = [];
+            for (const b of branches.data) {
+              if (b.name === 'main') continue;
+              try {
+                const { data: commit } = await github.rest.repos.getCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: b.commit.sha
+                });
+                infos.push({
+                  name: b.name,
+                  sha: b.commit.sha.substring(0, 7),
+                  date: commit.commit.committer.date
+                });
+              } catch (e) {
+                console.log(`Skipping ${b.name}: ${e.message}`);
+              }
+            }
+
+            infos.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const recent = infos.slice(0, 5);
+            console.log('Preview branches:', JSON.stringify(recent, null, 2));
+            core.setOutput('json', JSON.stringify(recent));
+
+      - name: Checkout preview branches
+        env:
+          BRANCHES_JSON: ${{ steps.branches.outputs.json }}
+        run: |
+          echo "$BRANCHES_JSON" | jq -r '.[].name' | while read -r branch; do
+            safe_name=$(echo "$branch" | sed 's/[^a-zA-Z0-9._-]/-/g')
+            echo "::group::Checkout $branch -> preview/$safe_name"
+            git clone --depth 1 --branch "$branch" \
+              "https://github.com/${{ github.repository }}.git" \
+              "branch-tmp" 2>&1 || { echo "Failed to clone $branch"; continue; }
+            mkdir -p "site/preview/$safe_name"
+            cp -r branch-tmp/* "site/preview/$safe_name/" 2>/dev/null || true
+            rm -rf "site/preview/$safe_name/.git" "site/preview/$safe_name/.github"
+            rm -rf branch-tmp
+            echo "::endgroup::"
+          done
+
+      - name: Generate preview index
+        env:
+          BRANCHES_JSON: ${{ steps.branches.outputs.json }}
+        run: |
+          mkdir -p site/preview
+          cat > site/preview/index.html << 'HEADER'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Branch Previews — Matchvine</title>
+            <style>
+              body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; color: #24292f; }
+              h1 { font-size: 1.4rem; }
+              table { width: 100%; border-collapse: collapse; }
+              th { text-align: left; border-bottom: 2px solid #d0d7de; padding: 0.5rem 0.25rem; font-size: 0.85rem; color: #656d76; }
+              td { padding: 0.5rem 0.25rem; border-bottom: 1px solid #d0d7de; }
+              a { color: #0969da; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+              code { font-size: 0.85rem; background: #f6f8fa; padding: 0.15rem 0.4rem; border-radius: 3px; }
+              .time { font-size: 0.85rem; color: #656d76; }
+              .back { margin-top: 1.5rem; font-size: 0.9rem; }
+            </style>
+          </head>
+          <body>
+            <h1>Branch Previews</h1>
+            <table>
+              <thead><tr><th>Branch</th><th>Commit</th><th>Last pushed</th></tr></thead>
+              <tbody>
+          HEADER
+
+          echo "$BRANCHES_JSON" | jq -c '.[]' | while read -r entry; do
+            name=$(echo "$entry" | jq -r '.name')
+            sha=$(echo "$entry" | jq -r '.sha')
+            date=$(echo "$entry" | jq -r '.date')
+            safe_name=$(echo "$name" | sed 's/[^a-zA-Z0-9._-]/-/g')
+            cat >> site/preview/index.html << ROW
+              <tr>
+                <td><a href="$safe_name/">$name</a></td>
+                <td><code>$sha</code></td>
+                <td><time class="time" datetime="$date">$date</time></td>
+              </tr>
+          ROW
+          done
+
+          cat >> site/preview/index.html << 'FOOTER'
+              </tbody>
+            </table>
+            <p class="back"><a href="../">← Back to main site</a></p>
+            <script>
+              document.querySelectorAll('time').forEach(el => {
+                const d = new Date(el.getAttribute('datetime'));
+                el.textContent = d.toLocaleString(undefined, {
+                  month: 'short', day: 'numeric', hour: 'numeric',
+                  minute: '2-digit', year: 'numeric'
+                });
+              });
+            </script>
+          </body>
+          </html>
+          FOOTER
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -28,7 +153,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: site
 
       - name: Deploy to GitHub Pages
         id: deployment
