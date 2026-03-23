@@ -112,7 +112,9 @@ export function enterEditMode(slotIndex) {
       }
     }
 
-    const color = getRandomColor(usedColors, excludeColors);
+    const color = bracket.autoColor !== false
+      ? getRandomColor(usedColors, excludeColors)
+      : '#ffffff';
     const newCell = createCell('', color);
     bracket.cells[newCell.id] = newCell;
     slot.cellId = newCell.id;
