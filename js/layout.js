@@ -231,9 +231,9 @@ function layoutStaggered(bracket) {
         // For the left half there's only 1 semis cell; for right half only 1.
         // Each half has exactly 1 semi. Left semi pushed down, right semi pushed up.
         if (leftHalf) {
-          y = feederB.y; // align with bottom feeder — pushed down toward center
+          y = feederB.y + CELL_HEIGHT + NEST_GAP / 2; // below bottom feeder
         } else {
-          y = feederA.y; // align with top feeder — pushed up toward center
+          y = feederA.y - CELL_HEIGHT - NEST_GAP / 2; // above top feeder
         }
       } else {
         // Normal rounds: nest centered between feeders
