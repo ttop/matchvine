@@ -123,7 +123,20 @@ function layoutFull(bracket) {
   return { positions, posMap, totalWidth, totalHeight, championX };
 }
 
-// ── Staggered layout ────────────────────────────────────────────────────────
+// ── Staggered (nested/waterfall) layout ──────────────────────────────────────
+//
+// In staggered mode, next-round cells NEST between their feeders vertically.
+// Cell c (winner of a vs b) sits below a and above b, shifted right.
+// This is much more compact than columnar layout.
+//
+// Visual (left half, 4 cells → 2 → 1):
+//   [a]
+//      [c] ──┐
+//   [b]      │
+//            [g]
+//   [d]      │
+//      [f] ──┘
+//   [e]
 
 function layoutStaggered(bracket) {
   const { size } = bracket;
@@ -132,23 +145,43 @@ function layoutStaggered(bracket) {
   const posMap = {};
 
   const halfSize = size / 2;
-  const roundsPerHalf = Math.log2(halfSize) + 1; // rounds 0..roundsPerHalf-1
+  const roundsPerHalf = Math.log2(halfSize) + 1;
 
-  // Height: same as classic — driven by round-0 count
-  const round0CountPerHalf = halfSize;
-  const round0Height = round0CountPerHalf * CELL_HEIGHT + (round0CountPerHalf - 1) * CELL_GAP;
+  // Vertical spacing: each round-0 pair needs enough space for the nested cell between them.
+  // For a pair (a, b), cell c sits between them. We need:
+  //   a.y + CELL_HEIGHT + NEST_GAP <= c.y
+  //   c.y + CELL_HEIGHT + NEST_GAP <= b.y
+  // So the spacing between a and b is: 2 * CELL_HEIGHT + 2 * NEST_GAP
+  // But pairs also need spacing between them (between b of one pair and a of next pair).
+  const NEST_GAP = CELL_HEIGHT + 16;  // enough vertical space between feeders for the winner cell to nest
+  const PAIR_GAP = 24; // vertical gap between pairs
+
+  // Calculate round-0 y positions for left half.
+  // Each pair of cells takes: CELL_HEIGHT + NEST_GAP + CELL_HEIGHT = 2*CH + NG
+  // Between pairs: PAIR_GAP
+  // For halfSize cells (halfSize/2 pairs):
+  const numPairs = halfSize / 2;
+  const pairHeight = 2 * CELL_HEIGHT + NEST_GAP;
+  const round0Height = numPairs * pairHeight + (numPairs - 1) * PAIR_GAP;
   const totalHeight = round0Height + TOP_PADDING * 2 + LABEL_MARGIN;
 
-  // Width: each round adds CELL_WIDTH + STAGGER_GAP (much smaller than ROUND_GAP)
-  // left half: roundsPerHalf columns, right half: roundsPerHalf columns, plus champion
+  // Horizontal offset: full cell width + small gap (no horizontal overlap)
+  const STAGGER_X = CELL_WIDTH + STAGGER_GAP;
+
+  // Total width for one half: round 0 starts at left, each subsequent round shifts right by STAGGER_X
+  const halfWidth = CELL_WIDTH + (roundsPerHalf - 1) * STAGGER_X;
   const CENTER_GAP = ROUND_GAP;
-  const halfWidth = CELL_WIDTH + (roundsPerHalf - 1) * (CELL_WIDTH + STAGGER_GAP);
   const totalWidth = LEFT_PADDING + halfWidth + CENTER_GAP + CHAMP_WIDTH + CENTER_GAP + halfWidth + RIGHT_PADDING;
 
   // --- Round 0: LEFT half ---
+  // Place in pairs: (0,1), (2,3), (4,5), ...
+  // Within a pair, first cell at top, second cell at bottom (with space for nested winner)
   for (let i = 0; i < halfSize; i++) {
     const slotIndex = getSlotIndex(size, 0, i);
-    const y = TOP_PADDING + i * (CELL_HEIGHT + CELL_GAP);
+    const pairIdx = Math.floor(i / 2);
+    const isSecondInPair = i % 2 === 1;
+    const pairTop = TOP_PADDING + pairIdx * (pairHeight + PAIR_GAP);
+    const y = isSecondInPair ? pairTop + CELL_HEIGHT + NEST_GAP : pairTop;
     const x = LEFT_PADDING;
     const pos = {
       slotIndex, round: 0, indexInRound: i,
@@ -162,7 +195,11 @@ function layoutStaggered(bracket) {
   const rightEdgeX = totalWidth - RIGHT_PADDING - CELL_WIDTH;
   for (let i = halfSize; i < size; i++) {
     const slotIndex = getSlotIndex(size, 0, i);
-    const y = TOP_PADDING + (i - halfSize) * (CELL_HEIGHT + CELL_GAP);
+    const localIdx = i - halfSize;
+    const pairIdx = Math.floor(localIdx / 2);
+    const isSecondInPair = localIdx % 2 === 1;
+    const pairTop = TOP_PADDING + pairIdx * (pairHeight + PAIR_GAP);
+    const y = isSecondInPair ? pairTop + CELL_HEIGHT + NEST_GAP : pairTop;
     const x = rightEdgeX;
     const pos = {
       slotIndex, round: 0, indexInRound: i,
@@ -172,22 +209,24 @@ function layoutStaggered(bracket) {
     posMap[slotIndex] = pos;
   }
 
-  // --- Rounds 1+ (not champion) ---
+  // --- Rounds 1+ (not champion): nest between feeders ---
   for (let round = 1; round < totalRounds - 1; round++) {
     const slotsInRound = getSlotsInRound(size, round);
     for (let idx = 0; idx < slotsInRound; idx++) {
       const slotIndex = getSlotIndex(size, round, idx);
       const leftHalf = isLeftHalf(size, round, idx);
       const feeders = getMatchupPair(size, round, idx);
-      const feederA = posMap[feeders[0]];
-      const feederB = posMap[feeders[1]];
-      const y = (feederA.y + feederB.y) / 2;
+      const feederA = posMap[feeders[0]]; // top feeder
+      const feederB = posMap[feeders[1]]; // bottom feeder
+
+      // Nest between feeders: y sits just below feeder A's bottom edge
+      const y = feederA.y + CELL_HEIGHT + NEST_GAP;
 
       let x;
       if (leftHalf) {
-        x = LEFT_PADDING + round * (CELL_WIDTH + STAGGER_GAP);
+        x = LEFT_PADDING + round * STAGGER_X;
       } else {
-        x = rightEdgeX - round * (CELL_WIDTH + STAGGER_GAP);
+        x = rightEdgeX - round * STAGGER_X;
       }
 
       const pos = {
@@ -199,7 +238,7 @@ function layoutStaggered(bracket) {
     }
   }
 
-  // --- Champion: centered between the two semi-final cells ---
+  // --- Champion: centered, prominent ---
   {
     const champRound = totalRounds - 1;
     const slotIndex = getChampionSlotIndex(size);

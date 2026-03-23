@@ -103,22 +103,26 @@ describe('calculateLayout — staggered mode', () => {
       .filter(p => p.round === 0 && p.isLeftHalf)
       .sort((a, b) => a.indexInRound - b.indexInRound);
 
-    // Same y positions
-    for (let i = 0; i < stR0.length; i++) {
-      expect(stR0[i].y).toBeCloseTo(clR0[i].y, 1);
+    // Staggered has different y spacing (paired with nesting gap)
+    // Just verify they're in order top-to-bottom
+    for (let i = 1; i < stR0.length; i++) {
+      expect(stR0[i].y).toBeGreaterThan(stR0[i - 1].y);
     }
   });
 
-  it('round 1 left-half cells have x = round-0 x + CELL_WIDTH + STAGGER_GAP (~30px)', () => {
+  it('round 1 left-half cells nest between feeders — x offset is partial overlap', () => {
     const result = calculateLayout({ size: 8, layoutMode: 'staggered' });
     const r0Left = result.positions.filter(p => p.round === 0 && p.isLeftHalf);
     const r1Left = result.positions.filter(p => p.round === 1 && p.isLeftHalf);
 
-    const expectedX = r0Left[0].x + CELL_WIDTH + STAGGER_GAP;
-    r1Left.forEach(p => expect(p.x).toBeCloseTo(expectedX, 1));
+    // Round 1 x should be greater than round 0 x but NOT a full CELL_WIDTH away
+    r1Left.forEach(p => {
+      expect(p.x).toBeGreaterThan(r0Left[0].x);
+      expect(p.x).toBeLessThan(r0Left[0].x + CELL_WIDTH);
+    });
   });
 
-  it('round 1 cells have y = midpoint of their two feeder cells', () => {
+  it('round 1 cells nest just below top feeder (not at midpoint)', () => {
     const result = calculateLayout({ size: 8, layoutMode: 'staggered' });
     const r0Left = result.positions
       .filter(p => p.round === 0 && p.isLeftHalf)
@@ -127,8 +131,10 @@ describe('calculateLayout — staggered mode', () => {
       .filter(p => p.round === 1 && p.isLeftHalf)
       .sort((a, b) => a.indexInRound - b.indexInRound);
 
-    const expectedY = (r0Left[0].y + r0Left[1].y) / 2;
-    expect(r1Left[0].y).toBeCloseTo(expectedY, 1);
+    // c nests between a and b: c.y should be just below a's bottom
+    const feederABottom = r0Left[0].y + CELL_HEIGHT;
+    expect(r1Left[0].y).toBeGreaterThanOrEqual(feederABottom);
+    expect(r1Left[0].y).toBeLessThanOrEqual(r0Left[1].y); // at or above feeder b
   });
 
   it('staggered totalWidth is LESS than classic totalWidth for same size', () => {
