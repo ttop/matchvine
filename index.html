@@ -270,7 +270,7 @@
     /* ── Seed Number Labels ────────────────────────────────────────────────── */
     .seed-number {
       position: absolute;
-      font-size: 9px;
+      font-size: 12px;
       color: #9ca3af;
     }
 
@@ -597,7 +597,7 @@
       border: 1px solid #e5e7eb;
     }
 
-    /* CSS arrow pointing down */
+    /* CSS arrow pointing down (popover above cell) */
     #format-popover::after {
       content: "";
       position: absolute;
@@ -610,6 +610,15 @@
       border-right: 8px solid transparent;
       border-top: 8px solid white;
       filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.08));
+    }
+
+    /* CSS arrow pointing up (popover below cell) */
+    #format-popover.popover-below::after {
+      bottom: auto;
+      top: -8px;
+      border-top: none;
+      border-bottom: 8px solid white;
+      filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.08));
     }
 
     .popover-section-label {
@@ -639,24 +648,7 @@
       flex-wrap: wrap;
     }
 
-    .auto-contrast-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .auto-contrast-row input[type="checkbox"] {
-      width: 14px;
-      height: 14px;
-      cursor: pointer;
-    }
-
-    .auto-contrast-row label {
-      font-size: 12px;
-      color: #374151;
-      cursor: pointer;
-    }
+    /* auto-contrast removed — always auto-calculated */
 
     /* ── Drag and Drop ─────────────────────────────────────────────────── */
     .cell.dragging {
@@ -726,17 +718,14 @@
     <button class="toolbar-btn" id="btn-settings" title="Settings">
       ⚙️ Settings
     </button>
+    <button class="toolbar-btn" id="btn-new-toolbar" title="New bracket">
+      ✚ New
+    </button>
 
     <div class="toolbar-spacer"></div>
 
     <button class="toolbar-btn" id="btn-export-png" title="Export as PNG">
       📷 Export PNG
-    </button>
-    <button class="toolbar-btn" id="btn-save" title="Save bracket">
-      💾 Save Bracket
-    </button>
-    <button class="toolbar-btn" id="btn-load" title="Load bracket from file">
-      📂 Load Bracket
     </button>
     <button class="toolbar-btn" id="btn-brackets" title="My brackets">
       📁 Brackets
@@ -828,6 +817,10 @@
         <!-- bracket entry items injected by JS -->
       </div>
       <button id="new-bracket-btn">+ New Bracket</button>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="toolbar-btn" id="btn-save" style="flex:1;justify-content:center" title="Save bracket to file">💾 Save to File</button>
+        <button class="toolbar-btn" id="btn-load" style="flex:1;justify-content:center" title="Load bracket from file">📂 Load from File</button>
+      </div>
     </div>
   </div>
 
@@ -859,6 +852,7 @@
 
   <!-- ── Format Popover ────────────────────────────────────────────────────── -->
   <div id="format-popover" class="hidden">
+    <button id="format-popover-close" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border:none;background:none;border-radius:6px;cursor:pointer;font-size:14px;color:#6b7280;display:flex;align-items:center;justify-content:center;" title="Close">✕</button>
     <div class="popover-section">
       <div class="popover-section-label">Background</div>
       <div class="color-grid" id="bg-color-grid">
@@ -866,13 +860,9 @@
       </div>
     </div>
     <div class="popover-section">
-      <div class="popover-section-label">Text Color</div>
+      <div class="popover-section-label">Text Color (auto)</div>
       <div id="text-color-row">
-        <!-- color swatches injected by JS -->
-      </div>
-      <div class="auto-contrast-row">
-        <input type="checkbox" id="auto-contrast" checked>
-        <label for="auto-contrast">Auto contrast</label>
+        <!-- auto-calculated text color preview -->
       </div>
     </div>
   </div>
@@ -940,6 +930,7 @@
     const TOP_PADDING = 20;
     const LABEL_MARGIN = 40;
     const LEFT_PADDING = 30; // enough room for seed numbers on the left
+    const RIGHT_PADDING = 35; // enough room for seed numbers on the right
 
     // ── State ────────────────────────────────────────────────────────────────
 
@@ -1144,7 +1135,7 @@
       const leftCols = roundsPerHalf;
       const rightCols = roundsPerHalf;
       const CENTER_GAP = ROUND_GAP;
-      const totalWidth = LEFT_PADDING + leftCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + CENTER_GAP + CHAMP_WIDTH + CENTER_GAP + rightCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + LEFT_PADDING;
+      const totalWidth = LEFT_PADDING + leftCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + CENTER_GAP + CHAMP_WIDTH + CENTER_GAP + rightCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + RIGHT_PADDING;
 
       // Champion x position: center
       const championX = LEFT_PADDING + leftCols * (CELL_WIDTH + ROUND_GAP) - ROUND_GAP + CENTER_GAP;
@@ -1168,7 +1159,7 @@
       }
 
       // --- Place round 0 cells for RIGHT half (indices halfSize..size-1) ---
-      const rightEdgeX = totalWidth - CELL_WIDTH;
+      const rightEdgeX = totalWidth - CELL_WIDTH - RIGHT_PADDING;
       for (let i = halfSize; i < size; i++) {
         const slotIndex = getSlotIndex(size, 0, i);
         const y = TOP_PADDING + (i - halfSize) * (CELL_HEIGHT + CELL_GAP);
@@ -1466,7 +1457,7 @@
       }
 
       // Right half labels (mirrored)
-      const rightEdgeX = totalWidth - CELL_WIDTH;
+      const rightEdgeX = totalWidth - CELL_WIDTH - RIGHT_PADDING;
       for (let r = 0; r < roundsPerHalf; r++) {
         const labelEl = document.createElement('div');
         labelEl.className = 'round-label';
@@ -1489,12 +1480,12 @@
           const seedEl = document.createElement('div');
           seedEl.className = 'seed-number';
           seedEl.textContent = '#' + (i + 1);
-          seedEl.style.top = (pos.y + CELL_HEIGHT / 2 - 6) + 'px';
+          seedEl.style.top = (pos.y + CELL_HEIGHT / 2 - 7) + 'px';
 
           if (pos.isLeftHalf) {
-            seedEl.style.left = (pos.x - 22) + 'px';
+            seedEl.style.left = (pos.x - 26) + 'px';
           } else {
-            seedEl.style.left = (pos.x + CELL_WIDTH + 4) + 'px';
+            seedEl.style.left = (pos.x + CELL_WIDTH + 6) + 'px';
           }
 
           cellWrapper.appendChild(seedEl);
@@ -1514,24 +1505,31 @@
       if (!textEl) return;
 
       const BASE_FONT = 22;
-      const MIN_FONT  = 11;
-      const maxW = cellDiv.clientWidth - 16; // horizontal padding
-      const maxH = cellDiv.clientHeight - 8; // vertical padding
+      const MIN_FONT = 11;
 
-      let fontSize = BASE_FONT;
-      textEl.style.fontSize = fontSize + 'px';
+      // Reset to measure at base size
+      textEl.style.fontSize = BASE_FONT + 'px';
       textEl.style.lineHeight = '1.2';
+      textEl.style.padding = '4px 8px';
+      textEl.style.overflow = 'hidden';
+      textEl.style.display = 'flex';
+      textEl.style.alignItems = 'center';
+      textEl.style.justifyContent = 'center';
+      textEl.style.height = '100%';
+      textEl.style.boxSizing = 'border-box';
 
-      // Only shrink if text content is long enough to warrant it
-      const text = textEl.textContent || '';
-      if (text.length <= 2) return; // single chars like "?" always fit at base size
+      // Short text always fits at base size
+      const text = (textEl.textContent || '').trim();
+      if (text.length <= 3) return;
 
+      // For longer text, check if it actually overflows
+      let fontSize = BASE_FONT;
       while (fontSize > MIN_FONT) {
-        if (textEl.scrollHeight <= maxH && textEl.scrollWidth <= maxW) {
+        textEl.style.fontSize = fontSize + 'px';
+        if (textEl.scrollHeight <= textEl.clientHeight && textEl.scrollWidth <= textEl.clientWidth) {
           break;
         }
         fontSize--;
-        textEl.style.fontSize = fontSize + 'px';
       }
     }
 
@@ -1630,11 +1628,17 @@
         if (!textEl) {
           textEl = document.createElement('span');
           textEl.className = 'cell-text';
-          textEl.style.display = 'block';
+          textEl.style.display = 'flex';
+          textEl.style.alignItems = 'center';
+          textEl.style.justifyContent = 'center';
           textEl.style.width = '100%';
+          textEl.style.height = '100%';
           textEl.style.textAlign = 'center';
           textEl.style.outline = 'none';
           textEl.style.wordBreak = 'break-word';
+          textEl.style.padding = '4px 8px';
+          textEl.style.boxSizing = 'border-box';
+          textEl.style.lineHeight = '1.2';
           cellEl.innerHTML = '';
           cellEl.appendChild(textEl);
         }
@@ -1672,11 +1676,18 @@
           cellEl.innerHTML = '';
           const textEl = document.createElement('span');
           textEl.className = 'cell-text';
-          textEl.style.display = 'block';
+          textEl.style.display = 'flex';
+          textEl.style.alignItems = 'center';
+          textEl.style.justifyContent = 'center';
           textEl.style.width = '100%';
+          textEl.style.height = '100%';
           textEl.style.textAlign = 'center';
           textEl.style.outline = 'none';
           textEl.style.wordBreak = 'break-word';
+          textEl.style.padding = '4px 8px';
+          textEl.style.boxSizing = 'border-box';
+          textEl.style.lineHeight = '1.2';
+          textEl.style.overflow = 'hidden';
           textEl.innerHTML = existingHtml;
           cellEl.appendChild(textEl);
         }
@@ -1854,7 +1865,6 @@
       const popover = document.getElementById('format-popover');
       const bgGrid = document.getElementById('bg-color-grid');
       const textRow = document.getElementById('text-color-row');
-      const autoCheck = document.getElementById('auto-contrast');
 
       // Populate background color grid
       bgGrid.innerHTML = '';
@@ -1868,26 +1878,25 @@
         bgGrid.appendChild(swatch);
       });
 
-      // Populate text color row
+      // Show auto-calculated text color as read-only preview
       textRow.innerHTML = '';
-      TEXT_COLORS.forEach(color => {
-        const swatch = document.createElement('div');
-        swatch.className = 'color-swatch';
-        swatch.style.backgroundColor = color;
-        swatch.style.width = '24px';
-        swatch.style.height = '24px';
-        swatch.style.borderRadius = '5px';
-        swatch.style.flexShrink = '0';
-        swatch.setAttribute('data-color', color);
-        swatch.setAttribute('data-type', 'text');
-        if (cell.textColor === color) swatch.classList.add('selected');
-        textRow.appendChild(swatch);
-      });
+      const autoColor = getAutoTextColor(cell.bgColor);
+      const previewSwatch = document.createElement('div');
+      previewSwatch.style.backgroundColor = autoColor;
+      previewSwatch.style.width = '24px';
+      previewSwatch.style.height = '24px';
+      previewSwatch.style.borderRadius = '5px';
+      previewSwatch.style.border = '2px solid #3b82f6';
+      previewSwatch.style.flexShrink = '0';
+      textRow.appendChild(previewSwatch);
+      const label = document.createElement('span');
+      label.style.fontSize = '11px';
+      label.style.color = '#6b7280';
+      label.style.marginLeft = '8px';
+      label.textContent = autoColor === '#1a1a1a' ? 'Dark text' : 'Light text';
+      textRow.appendChild(label);
 
-      // Auto-contrast checkbox
-      autoCheck.checked = cell.textColor === getAutoTextColor(cell.bgColor);
-
-      // Position popover above the cell using fixed/screen coordinates
+      // Position popover relative to the cell using fixed/screen coordinates
       const container = document.getElementById('bracket-container');
       const cellEl = container.querySelector(`.cell[data-slot-index="${slotIndex}"]`);
       if (!cellEl) return;
@@ -1896,15 +1905,29 @@
 
       const popoverWidth = 240;
       let left = cellRect.left + (cellRect.width / 2) - (popoverWidth / 2);
-      let top = cellRect.top - 10;
 
       popover.classList.remove('hidden');
 
+      // Remove any previous arrow class
+      popover.classList.remove('popover-below');
+
       const popoverHeight = popover.offsetHeight;
-      top -= popoverHeight;
+      const GAP = 8;
+
+      let showBelow = false;
+      let top;
+
+      // If not enough room above, show below instead
+      if (cellRect.top - popoverHeight - GAP < 4) {
+        showBelow = true;
+        top = cellRect.bottom + GAP;
+        popover.classList.add('popover-below');
+      } else {
+        top = cellRect.top - popoverHeight - GAP;
+      }
 
       if (left < 4) left = 4;
-      if (top < 4) top = 4;
+      if (left + popoverWidth > window.innerWidth - 4) left = window.innerWidth - popoverWidth - 4;
 
       popover.style.left = left + 'px';
       popover.style.top = top + 'px';
@@ -1914,6 +1937,11 @@
       state.formattingSlotIndex = null;
       document.getElementById('format-popover').classList.add('hidden');
     }
+
+    document.getElementById('format-popover-close').addEventListener('click', function(e) {
+      e.stopPropagation();
+      hideFormatPopover();
+    });
 
     // ── Format popover event handlers ──
 
@@ -1950,36 +1978,12 @@
 
       const color = swatch.getAttribute('data-color');
       const type = swatch.getAttribute('data-type');
-      const autoCheck = document.getElementById('auto-contrast');
 
       if (type === 'bg') {
         cell.bgColor = color;
-        if (autoCheck.checked) {
-          cell.textColor = getAutoTextColor(color);
-        }
-      } else if (type === 'text') {
-        cell.textColor = color;
-        autoCheck.checked = false;
+        cell.textColor = getAutoTextColor(color);
       }
 
-      const savedSlot = state.formattingSlotIndex;
-      renderBracket(bracket);
-      showFormatPopover(savedSlot);
-    });
-
-    // Auto-contrast checkbox
-    document.getElementById('auto-contrast').addEventListener('change', function(e) {
-      e.stopPropagation();
-      if (!this.checked) return;
-      if (state.formattingSlotIndex === null) return;
-
-      const bracket = state.bracket;
-      const slot = bracket.slots[state.formattingSlotIndex];
-      if (!slot || !slot.cellId) return;
-      const cell = bracket.cells[slot.cellId];
-      if (!cell) return;
-
-      cell.textColor = getAutoTextColor(cell.bgColor);
       const savedSlot = state.formattingSlotIndex;
       renderBracket(bracket);
       showFormatPopover(savedSlot);
@@ -2318,7 +2322,10 @@
     const loadedGoogleFonts = new Set();
 
     function loadGoogleFont(fontName) {
-      if (loadedGoogleFonts.has(fontName)) return Promise.resolve();
+      if (loadedGoogleFonts.has(fontName)) {
+        // Even if we added the stylesheet before, wait for the font to actually be available
+        return document.fonts.load(`500 16px "${fontName}"`).then(() => {}).catch(() => {});
+      }
 
       const encoded = fontName.replace(/\s+/g, '+');
       const link = document.createElement('link');
@@ -2327,7 +2334,11 @@
       document.head.appendChild(link);
       loadedGoogleFonts.add(fontName);
 
-      return document.fonts.ready;
+      // Wait for the specific font to load, not just document.fonts.ready
+      return document.fonts.load(`500 16px "${fontName}"`).then(() => {}).catch(() => {
+        // Fallback: wait for all fonts to be ready
+        return document.fonts.ready;
+      });
     }
 
     function isGoogleFont(fontFamily) {
@@ -2748,6 +2759,10 @@
       hideDialog('new-bracket-dialog');
     });
 
+    document.getElementById('btn-new-toolbar').addEventListener('click', function() {
+      openNewBracketDialog();
+    });
+
     document.getElementById('new-bracket-size-toggles').addEventListener('click', function(e) {
       const btn = e.target.closest('.size-toggle');
       if (!btn) return;
@@ -2757,13 +2772,22 @@
       });
     });
 
-    document.getElementById('new-bracket-create-btn').addEventListener('click', function() {
+    function createNewBracketFromDialog() {
       const title = document.getElementById('new-bracket-title-input').value.trim() || 'New Bracket';
       const newBr = createBracket(newBracketSelectedSize, title);
       state.bracket = newBr;
       saveBracket(newBr);
       fullRenderCurrentBracket();
       hideDialog('new-bracket-dialog');
+    }
+
+    document.getElementById('new-bracket-create-btn').addEventListener('click', createNewBracketFromDialog);
+
+    document.getElementById('new-bracket-title-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        createNewBracketFromDialog();
+      }
     });
 
     function switchToBracket(id) {
@@ -3022,7 +3046,7 @@
       // Champion label
       ctx.fillText('Final', ox + layout.championX + CHAMP_WIDTH / 2, labelY);
       // Right labels
-      const rightEdgeX = totalWidth - CELL_WIDTH;
+      const rightEdgeX = totalWidth - CELL_WIDTH - RIGHT_PADDING;
       for (let r = 0; r < roundsPerHalf; r++) {
         const x = ox + rightEdgeX - r * (CELL_WIDTH + ROUND_GAP) + CELL_WIDTH / 2;
         ctx.fillText(getHalfRoundLabel(r, roundsPerHalf), x, labelY);
@@ -3031,7 +3055,7 @@
       // Seed numbers
       if (bracket.showSeedNumbers) {
         ctx.fillStyle = '#9ca3af';
-        ctx.font = '9px sans-serif';
+        ctx.font = '12px sans-serif';
         for (let i = 0; i < size; i++) {
           const slotIndex = getSlotIndex(size, 0, i);
           const pos = posMap[slotIndex];
