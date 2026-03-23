@@ -394,7 +394,9 @@ export function renderBracket(bracket, options) {
   const labelY = totalHeight - 30;
 
   function getHalfRoundLabel(round, roundsInHalf) {
-    if (round === roundsInHalf - 1) return 'Semis';
+    if (round === roundsInHalf - 1) return 'Finals';
+    if (round === roundsInHalf - 2) return 'Semifinals';
+    if (round === roundsInHalf - 3) return 'Quarterfinals';
     return 'Round ' + (round + 1);
   }
 
@@ -432,7 +434,7 @@ export function renderBracket(bracket, options) {
     labelEl.style.left = championX + 'px';
     labelEl.style.top = labelY + 'px';
     labelEl.style.width = CHAMP_WIDTH + 'px';
-    labelEl.textContent = 'Final';
+    labelEl.textContent = 'Champion';
     cellWrapper.appendChild(labelEl);
   }
 
