@@ -84,6 +84,72 @@ export function getChampionSlotIndex(size) {
   return 2 * size - 2;
 }
 
+/**
+ * Returns the traditional bracket seeding order for round-0 slot indices.
+ * In NCAA-style seeding, #1 plays #N, #8 plays #N-7, etc., and seeds are
+ * distributed so top seeds don't meet until the latest possible round.
+ *
+ * For a half-bracket of size H, the seed positions are generated recursively:
+ * - Size 2: [1, 2]
+ * - Size 4: [1, 4, 3, 2]  (1v4, 3v2 — so 1 and 2 are on opposite sides)
+ * - Size 8: [1, 8, 5, 4, 3, 6, 7, 2]
+ * - etc.
+ *
+ * Returns an array of round-0 slot indices in the order seeds should be placed.
+ * Seed #1 goes into the first slot in the array, seed #2 into the second, etc.
+ */
+export function getBracketSeedOrder(size) {
+  const halfSize = size / 2;
+
+  // Generate seed positions for one half-bracket
+  function generateHalfSeeds(n) {
+    if (n === 1) return [1];
+    const prev = generateHalfSeeds(n / 2);
+    const result = [];
+    for (const seed of prev) {
+      result.push(seed);
+      result.push(n + 1 - seed);
+    }
+    return result;
+  }
+
+  const leftSeeds = generateHalfSeeds(halfSize);
+  const rightSeeds = generateHalfSeeds(halfSize);
+
+  // leftSeeds gives positions 1..halfSize for the left half
+  // rightSeeds gives positions 1..halfSize for the right half
+  // Map seed positions to round-0 slot indices:
+  //   Left half seeds → slot indices 0..halfSize-1 (seed position - 1)
+  //   Right half seeds → slot indices halfSize..size-1 (halfSize + seed position - 1)
+  // But we want the seeding order: seed #1 first, #2 second, etc.
+  // So we invert: create an array where index = seed rank, value = slot index
+
+  const order = [];
+
+  // Left half: seed ranks 1..halfSize map to slot indices based on leftSeeds
+  // leftSeeds[i] tells us what seed rank goes in slot position i
+  // We want: for seed rank r, which slot index?
+  const leftSlotForSeed = new Array(halfSize + 1);
+  for (let i = 0; i < halfSize; i++) {
+    leftSlotForSeed[leftSeeds[i]] = getSlotIndex(size, 0, i);
+  }
+
+  // Right half: seed ranks 1..halfSize map to slot indices
+  const rightSlotForSeed = new Array(halfSize + 1);
+  for (let i = 0; i < halfSize; i++) {
+    rightSlotForSeed[rightSeeds[i]] = getSlotIndex(size, 0, halfSize + i);
+  }
+
+  // Interleave: overall seed #1 → left #1, seed #2 → right #1, seed #3 → left #2, etc.
+  // This puts #1 and #2 on opposite sides of the bracket
+  for (let r = 1; r <= halfSize; r++) {
+    order.push(leftSlotForSeed[r]);
+    order.push(rightSlotForSeed[r]);
+  }
+
+  return order;
+}
+
 // ── Factory functions ─────────────────────────────────────────────────────
 
 export function createBracket(size, title) {
