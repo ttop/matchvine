@@ -19,7 +19,7 @@ export function saveBracket(bracket) {
   // Update index
   let index = loadBracketIndex();
   const existing = index.findIndex(entry => entry.id === bracket.id);
-  const meta = { id: bracket.id, title: bracket.title, size: bracket.size, updatedAt: bracket.updatedAt };
+  const meta = { id: bracket.id, title: bracket.title, size: bracket.size, createdAt: bracket.createdAt, updatedAt: bracket.updatedAt };
   if (existing >= 0) {
     index[existing] = meta;
   } else {

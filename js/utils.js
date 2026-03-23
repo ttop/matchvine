@@ -67,6 +67,50 @@ export function generateId() {
   return Date.now() + '-' + Math.random().toString(36).slice(2, 11);
 }
 
+/**
+ * Convert a bracket title into a URL-safe slug.
+ * e.g. "Top Albums!" → "top-albums"
+ */
+export function slugify(title) {
+  return (title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    || 'untitled';
+}
+
+/**
+ * Build a map from slug → bracket id, using the index metadata.
+ * The oldest bracket (by createdAt) owns the bare slug; duplicates get -2, -3, etc.
+ *
+ * @param {Array<{id, title, createdAt}>} index
+ * @returns {{ slugToId: Map<string,string>, idToSlug: Map<string,string> }}
+ */
+export function buildSlugMap(index) {
+  // Group brackets by their base slug
+  const groups = new Map();
+  for (const entry of index) {
+    const base = slugify(entry.title);
+    if (!groups.has(base)) groups.set(base, []);
+    groups.get(base).push(entry);
+  }
+
+  const slugToId = new Map();
+  const idToSlug = new Map();
+
+  for (const [base, entries] of groups) {
+    // Sort by createdAt ascending — oldest first owns the bare slug
+    entries.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+    entries.forEach((entry, i) => {
+      const slug = i === 0 ? base : `${base}-${i + 1}`;
+      slugToId.set(slug, entry.id);
+      idToSlug.set(entry.id, slug);
+    });
+  }
+
+  return { slugToId, idToSlug };
+}
+
 export function formatRelativeTime(isoString) {
   if (!isoString) return '';
   const now = Date.now();
