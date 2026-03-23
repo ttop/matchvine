@@ -32,12 +32,12 @@ export const DEFAULT_FONTS = [
 ];
 
 export const GOOGLE_FONTS = [
-  'Roboto',
+  'Kalam',
   'Merriweather',
   'Oswald',
   'Poppins',
   'Pacifico',
-  'Bangers',
+  'Anta',
   'Fredoka One',
   'Righteous',
 ];
