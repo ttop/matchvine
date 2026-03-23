@@ -13,6 +13,7 @@ import { escapeHtml } from './utils.js';
 // ── Module-level save callback ───────────────────────────────────────────
 
 let _onSaveCallback = null;
+let _onTitleChangeCallback = null;
 
 /**
  * Register a callback that runs after every renderBracket call.
@@ -20,6 +21,14 @@ let _onSaveCallback = null;
  */
 export function setOnSave(fn) {
   _onSaveCallback = fn;
+}
+
+/**
+ * Register a callback that runs when the bracket title changes.
+ * Used to update the URL hash after rename.
+ */
+export function setOnTitleChange(fn) {
+  _onTitleChangeCallback = fn;
 }
 
 // ── autoSizeText (private helper) ────────────────────────────────────────
@@ -561,6 +570,7 @@ export function renderBracket(bracket, options) {
         bracket.title = newTitle;
         bracket.updatedAt = new Date().toISOString();
         if (_onSaveCallback) _onSaveCallback(bracket);
+        if (_onTitleChangeCallback) _onTitleChangeCallback();
       } else if (!newTitle) {
         this.textContent = titleBeforeEdit;
       }

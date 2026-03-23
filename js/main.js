@@ -1,7 +1,7 @@
 // ── Matchvine — Main Entry Point ─────────────────────────────────────────
 
 import { state } from './state.js';
-import { renderBracket, setOnSave } from './render.js';
+import { renderBracket, setOnSave, setOnTitleChange } from './render.js';
 import { setupEditingEvents } from './editing.js';
 import {
   setupDialogEvents, openNewBracketDialog,
@@ -13,10 +13,12 @@ import {
   handleBracketFileLoad, fullRenderCurrentBracket,
 } from './storage.js';
 import { exportPNG } from './png-export.js';
+import { buildSlugMap } from './utils.js';
 
 // ── Wire save into render ────────────────────────────────────────────────
 
 setOnSave(saveBracket);
+setOnTitleChange(updateHash);
 
 // ── Render deps for fullRenderCurrentBracket ─────────────────────────────
 
@@ -32,6 +34,42 @@ function doFullRender() {
   fullRenderCurrentBracket(renderDeps);
 }
 
+// ── URL hash ────────────────────────────────────────────────────────────
+
+function updateHash(push = false) {
+  const index = loadBracketIndex();
+  const { idToSlug } = buildSlugMap(index);
+  const slug = state.bracket ? idToSlug.get(state.bracket.id) : null;
+  if (slug) {
+    if (push && location.hash && location.hash !== '#') {
+      // Native hash assignment creates a real history entry
+      // that reliably triggers hashchange on back/forward.
+      location.hash = '#' + slug;
+    } else {
+      // replaceState for: initial load, title renames, and the very
+      // first bracket (avoids a stale bare-URL entry in history).
+      history.replaceState(null, '', '#' + slug);
+    }
+  } else {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+}
+
+function loadBracketFromHash() {
+  const hash = location.hash.replace(/^#/, '');
+  if (!hash) return;
+  const index = loadBracketIndex();
+  const { slugToId } = buildSlugMap(index);
+  const id = slugToId.get(hash);
+  if (!id || (state.bracket && state.bracket.id === id)) return;
+  const bracket = loadBracket(id);
+  if (!bracket) return;
+  state.bracket = bracket;
+  doFullRender();
+}
+
+window.addEventListener('hashchange', loadBracketFromHash);
+
 // ── Initialize ───────────────────────────────────────────────────────────
 
 const container = document.getElementById('bracket-container');
@@ -46,6 +84,7 @@ setupDialogEvents({
   loadBracket,
   deleteBracketFromStorage,
   fullRenderCurrentBracket: doFullRender,
+  updateHash,
 });
 
 // ── Toolbar: Export PNG ──────────────────────────────────────────────────
@@ -75,6 +114,7 @@ document.getElementById('load-file-input').addEventListener('change', function(e
     state.bracket = data;
     saveBracket(data);
     doFullRender();
+    updateHash(true);
   });
 
   // Reset so the same file can be loaded again
@@ -87,11 +127,26 @@ document.getElementById('load-file-input').addEventListener('change', function(e
   const index = loadBracketIndex();
 
   if (index.length > 0) {
-    index.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-    const bracket = loadBracket(index[0].id);
+    // Check URL hash for a specific bracket
+    const hash = location.hash.replace(/^#/, '');
+    let bracket = null;
+
+    if (hash) {
+      const { slugToId } = buildSlugMap(index);
+      const id = slugToId.get(hash);
+      if (id) bracket = loadBracket(id);
+    }
+
+    // Fall back to most recently updated
+    if (!bracket) {
+      index.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      bracket = loadBracket(index[0].id);
+    }
+
     if (bracket) {
       state.bracket = bracket;
       doFullRender();
+      updateHash();
       return;
     }
   }

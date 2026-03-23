@@ -16,6 +16,7 @@ let _loadBracketIndex = null;
 let _loadBracket = null;
 let _deleteBracketFromStorage = null;
 let _fullRenderCurrentBracket = null;
+let _updateHash = null;
 
 // ── Background colors for settings ──────────────────────────────────────
 
@@ -362,6 +363,8 @@ function _populateBracketsDropdown() {
             openNewBracketDialog();
             return;
           }
+        } else if (_updateHash) {
+          _updateHash();
         }
         _populateBracketsDropdown(); // refresh list
       });
@@ -387,6 +390,7 @@ function switchToBracket(id) {
   if (!bracket) return;
   state.bracket = bracket;
   _fullRenderCurrentBracket();
+  if (_updateHash) _updateHash(true);
 }
 
 // ── New Bracket Dialog ───────────────────────────────────────────────────
@@ -497,6 +501,7 @@ function createNewBracketFromDialog() {
   _saveBracket(newBr);
   _fullRenderCurrentBracket();
   hideDialog('new-bracket-dialog');
+  if (_updateHash) _updateHash(true);
 }
 
 // ── Shuffle ──────────────────────────────────────────────────────────────
@@ -538,6 +543,7 @@ export function setupDialogEvents(storageFns) {
   _loadBracket = storageFns.loadBracket;
   _deleteBracketFromStorage = storageFns.deleteBracketFromStorage;
   _fullRenderCurrentBracket = storageFns.fullRenderCurrentBracket;
+  _updateHash = storageFns.updateHash;
 
   // Initialize formatting state on state object
   state.formattingSlotIndex = null;
