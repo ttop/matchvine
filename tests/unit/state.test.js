@@ -82,7 +82,7 @@ describe('createBracket', () => {
     expect(b.size).toBe(16);
     expect(b.cells).toBeDefined();
     expect(typeof b.cells).toBe('object');
-    expect(b.layoutMode).toBe('full');
+    expect(b.layoutMode).toBe('staggered');
   });
 });
 
