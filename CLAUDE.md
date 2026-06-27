@@ -41,7 +41,10 @@ tests/
 
 - `npx vitest` — run unit tests
 - `npx playwright test` — run e2e tests
-- Open `index.html` in a browser — that's it, no build step
+- **Run locally via a server, not `file://`.** The app uses ES modules (`<script type="module">`), which browsers refuse to load over the `file://` protocol (CORS/origin rules). Opening `index.html` directly makes the page render but leaves every button dead because `js/main.js` never loads. Serve it over HTTP instead:
+  - `npm run serve` — then open the printed `http://localhost:8000` URL
+  - or `python3 -m http.server 8000` (any static server works)
+- No build step — just serve the files as-is.
 
 ## GitHub Pages
 
