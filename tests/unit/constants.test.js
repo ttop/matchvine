@@ -9,10 +9,28 @@ import {
   CELL_HEIGHT,
   CHAMP_WIDTH,
 } from '../../js/constants.js';
+import { getAutoTextColor, getContrastRatio } from '../../js/utils.js';
 
 describe('constants', () => {
-  it('COLOR_PALETTE has 40 entries', () => {
-    expect(COLOR_PALETTE).toHaveLength(40);
+  it('COLOR_PALETTE has 48 entries', () => {
+    expect(COLOR_PALETTE).toHaveLength(48);
+  });
+
+  it('every palette color is a valid 6-digit hex', () => {
+    for (const color of COLOR_PALETTE) {
+      expect(color).toMatch(/^#[0-9a-f]{6}$/);
+    }
+  });
+
+  it('includes pure black', () => {
+    expect(COLOR_PALETTE).toContain('#000000');
+  });
+
+  it('every palette color clears WCAG AA (4.5) with its auto text color', () => {
+    for (const bg of COLOR_PALETTE) {
+      const ratio = getContrastRatio(bg, getAutoTextColor(bg));
+      expect(ratio, `contrast too low for ${bg}`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it('BRACKET_SIZES is [4,8,16,32,64,128]', () => {

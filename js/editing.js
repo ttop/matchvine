@@ -81,6 +81,17 @@ export function confirmEdit() {
   }
 }
 
+// ── selectAllText ────────────────────────────────────────────────────────
+
+/** Select all text inside textEl so the next keystroke replaces it. */
+function selectAllText(textEl) {
+  const range = document.createRange();
+  range.selectNodeContents(textEl);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
 // ── enterEditMode ────────────────────────────────────────────────────────
 
 /**
@@ -182,6 +193,13 @@ export function enterEditMode(slotIndex) {
 
   // Focus immediately — no setTimeout needed since we didn't re-render
   textEl.focus();
+
+  // Select the existing text so typing replaces it (like renaming a label),
+  // instead of leaving the caret stranded at offset 0. Empty cells have
+  // nothing to select.
+  if (!wasEmpty) {
+    selectAllText(textEl);
+  }
 }
 
 // ── setupEditingEvents ───────────────────────────────────────────────────

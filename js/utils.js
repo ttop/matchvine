@@ -50,13 +50,15 @@ export function getContrastRatio(color1, color2) {
 
 /**
  * Choose dark or light text colour based on the background.
- * Uses dark text (#1a1a1a) when it achieves >= 4.5 contrast ratio,
- * otherwise falls back to white.
+ * Picks whichever of dark text (#1a1a1a) or white yields the higher
+ * contrast ratio, so darker backgrounds (e.g. black) get white text.
  */
 export function getAutoTextColor(bgColor) {
   const darkText = '#1a1a1a';
   const lightText = '#ffffff';
-  return getContrastRatio(bgColor, darkText) >= 4.5 ? darkText : lightText;
+  return getContrastRatio(bgColor, darkText) >= getContrastRatio(bgColor, lightText)
+    ? darkText
+    : lightText;
 }
 
 export function escapeHtml(str) {
