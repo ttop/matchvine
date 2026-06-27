@@ -21,9 +21,16 @@ Tournament bracket maker — a simple web app with no ads.
 The app uses ES modules, so it needs a local web server to run (opening `index.html` directly via `file://` won't work due to CORS restrictions).
 
 ```sh
-# Serve locally with any static server, e.g.:
+# Serve locally with any static server. Python is built in on most
+# systems, so it's the easiest option:
+python3 -m http.server 8000
+# then open http://localhost:8000
+
+# Or, if you prefer Node:
 npx serve
 ```
+
+The repo also ships an `npm run serve` shortcut (it just runs the Python command above).
 
 ### Development Setup
 
